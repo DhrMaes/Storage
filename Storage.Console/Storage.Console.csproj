@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>DhrMaes.Storage.Console</RootNamespace>
+
+		<PackAsTool>true</PackAsTool>
+		<ToolCommandName>storage</ToolCommandName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />
+	  <!--<ProjectReference Include="..\Storage.Provider.FileSystem\Storage.Provider.FileSystem.csproj" />-->
+	</ItemGroup>
+
+</Project>

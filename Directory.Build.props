@@ -1,0 +1,10 @@
+<Project>
+    <ItemGroup>
+        <Content Include="..\allowed_words.dic">
+            <Link>Properties\allowed_words.dic</Link>
+        </Content>
+        <Content Include="..\.editorconfig">
+            <Link>Properties\.editorconfig</Link>
+        </Content>
+    </ItemGroup>
+</Project>

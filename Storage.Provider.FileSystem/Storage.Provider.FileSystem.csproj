@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<RootNamespace>DhrMaes.Storage.Provider.FileSystem</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />
+	</ItemGroup>
+
+	<Target Name="CopyToAppData" AfterTargets="Build">
+		<PropertyGroup>
+			<PluginName>$([System.Text.RegularExpressions.Regex]::Replace('$(MSBuildProjectName)', '^Storage\.Provider\.', ''))</PluginName>
+			<AppDataPath>$(APPDATA)\DhrMaes\Storage\Plugins\$(PluginName)</AppDataPath>
+		</PropertyGroup>
+		
+		<MakeDir Directories="$(AppDataPath)" />
+		
+		<ItemGroup>
+			<FilesToCopy Include="$(OutputPath)\**\*.*" Exclude="$(OutputPath)\Storage.Core.dll;$(OutputPath)\Storage.Core.pdb" />
+		</ItemGroup>
+		
+		<Copy
+			SourceFiles="@(FilesToCopy)"
+			DestinationFolder="$(AppDataPath)"
+			SkipUnchangedFiles="true" />
+	</Target>
+
+</Project>
