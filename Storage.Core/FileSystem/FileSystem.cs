@@ -20,5 +20,19 @@
 
 			return Path.Combine(baseDir, "DhrMaes", "Storage");
 		}
-	}
+
+		public static string GetPluginsDir()
+		{
+			return Path.Combine(
+				GetUserConfigDir(),
+				"Plugins");
+		}
+
+        public static string GetProvidersDir()
+        {
+            return Path.Combine(
+                GetUserConfigDir(),
+                "Providers");
+        }
+    }
 }

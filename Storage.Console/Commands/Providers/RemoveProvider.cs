@@ -1,17 +1,13 @@
 ﻿namespace DhrMaes.Storage.Console.Commands.Providers
 {
 	using System;
-	using System.Collections.Generic;
 	using System.CommandLine;
-	using System.Linq;
-	using System.Text;
-	using System.Threading.Tasks;
-
-	using DhrMaes.Storage.Core;
+	
+    using DhrMaes.Storage.Messages;
 
 	internal class RemoveProvider
 	{
-        internal static Command Create(Dmc dmc)
+        internal static Command Create(ProviderService.ProviderServiceClient client)
         {
             var idOption = new Option<string>(
                 name: "--id",
@@ -25,7 +21,8 @@
             command.AddOption(idOption);
             command.SetHandler((id) =>
             {
-                dmc.RemoveProvider(id);
+                Console.WriteLine("This feature is not yet implemented.");
+                //dmc.RemoveProvider(id);
             }, idOption);
             return command;
         }

@@ -1,20 +1,20 @@
 ﻿namespace DhrMaes.Storage.Console
 {
-	using System;
-	using System.CommandLine;
-	using System.Threading.Tasks;
+    using System;
+    using System.CommandLine;
+    using System.Threading.Tasks;
 
-	using DhrMaes.Storage.Core;
+    using Grpc.Net.Client;
 
-	public class Program
-	{
-		enum ProviderType
-		{
-			FileSystem,
-		}
+    public class Program
+    {
+        enum ProviderType
+        {
+            FileSystem,
+        }
 
-		public static async Task<int> Main(string[] args)
-		{
+        public static async Task<int> Main(string[] args)
+        {
             //args = new[]
             //{
             //	"provider",
@@ -34,21 +34,49 @@
             //    "rmdir", "/Images",
             //};
 
-            args = new[]
+            //args = new[]
+            //{
+            //    "fs",
+            //    "ls", "/",
+            //};
+
+            //args = new[]
+            //{
+            //    "fs",
+            //    "upload", @"C:\Users\ArneMA\Downloads\Bellewaerde Maes Arne.pdf", "/Documents/Bellewaerde Maes Arne.pdf",
+            //};
+
+            //args = new[]
+            //{
+            //    "fs",
+            //    "rm", "/Documents/Bellewaerde Maes Arne.pdf",
+            //};
+
+            //args = new[]
+            //{
+            //    "provider",
+            //    "add", "GoogleDrive",
+            //};
+
+            //args = new[]
+            //{
+            //    "provider",
+            //    "add", "--help",
+            //};
+
+            using var channel = GrpcChannel.ForAddress("http://localhost:32794");
+            if (channel is null)
             {
-                "fs",
-                "ls", "/",
-            };
+                throw new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.Internal, "Failed to create gRPC channel."));
+            }
 
-            using var dmc = new Dmc();
-			var rootCommand = Commands.RootCommandFactory.Create(dmc);
-			return await rootCommand.InvokeAsync(args);
-		}
+            var rootCommand = Commands.RootCommandFactory.Create(channel);
+            return await rootCommand.InvokeAsync(args);
 
-		private static async Task<int> HandleProviderCommand(ProviderType type)
-		{
-			Console.WriteLine($"Provider type: {type}");
-			return 0;
-		}
-	}
+
+            //         using var dmc = new Dmc();
+            //var rootCommand = Commands.RootCommandFactory.Create(dmc);
+            //return await rootCommand.InvokeAsync(args);
+        }
+    }
 }

@@ -8,19 +8,33 @@
     using DhrMaes.Storage.Core.Plugins;
     using DhrMaes.Storage.Core.Providers;
     using DhrMaes.Storage.Core.Structure;
+    using DhrMaes.Storage.Core.Structure.File;
     using DhrMaes.Storage.Core.Structure.Nodes;
     using DhrMaes.Storage.Core.Structure.Serialization;
 
-    internal class Dmc : IDmc, IDisposable
+    public class Dmc : IDmc, IDisposable
     {
         private readonly PluginLoader _pluginLoader;
-        private readonly ICollection<IStorageProvider> _providers;
+        private readonly Lazy<ICollection<IStorageProvider>> _providers;
         private readonly Lazy<DirectoryNode> _root;
 
         public Dmc()
         {
             _pluginLoader = new PluginLoader();
-            _providers = GetProviders();
+            _providers = new Lazy<ICollection<IStorageProvider>>(() =>
+            {
+                var providers = new List<IStorageProvider>();
+                var providerPath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers");
+                foreach (var configPath in Directory.GetFiles(providerPath, "*.provider", SearchOption.AllDirectories))
+                {
+                    var loadTask = PluginLoader.LoadProvider(configPath);
+                    loadTask.Wait();
+                    var provider = loadTask.Result;
+                    providers.Add(provider);
+                }
+
+                return providers;
+            });
             _root = new Lazy<DirectoryNode>(() =>
             {
                 var structurePath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "structure.json");
@@ -41,48 +55,52 @@
 
         public PluginLoader PluginLoader => _pluginLoader;
 
+        public ICollection<IStorageProvider> Providers => _providers.Value;
+
         public DirectoryNode Root => _root.Value;
 
-        public ICollection<IStorageProvider> GetProviders()
+        public async Task<IReadOnlyDictionary<string, Type>> GetInstalledProviders()
         {
-            var providers = new List<IStorageProvider>();
-            var providerPath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers");
-            foreach (var configPath in Directory.GetFiles(providerPath, "*.provider", SearchOption.AllDirectories))
-            {
-                var provider = PluginLoader.LoadProvider(configPath);
-                providers.Add(provider);
-            }
-
-            return providers;
+            return PluginLoader.ConfigTypes;
         }
 
-        public IStorageProvider AddProvider(IStorageProviderConfig config)
+        public async Task<IStorageProvider> AddProvider(IStorageProviderConfig config)
         {
             var id = Guid.CreateVersion7();
 
-            var providerDir = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers");
-            if (!Directory.Exists(providerDir))
-            {
-                Directory.CreateDirectory(providerDir);
-            }
-
-            // TODO: Fill type in dynamically
             var providerType = config.GetType().GetCustomAttribute<ProviderIdentifierAttribute>()?.Id;
             if (string.IsNullOrWhiteSpace(providerType))
             {
                 throw new ArgumentException("Provider config type does not have a ProviderIdentifierAttribute or it has an invalid identifier.", nameof(config));
             }
 
-            var providerConfigPath = Path.Combine(providerDir, providerType, $"{id}.provider");
+            var providerDir = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers", providerType);
+            if (!Directory.Exists(providerDir))
+            {
+                Directory.CreateDirectory(providerDir);
+            }
 
-            File.WriteAllText(providerConfigPath, JsonSerializer.Serialize(config, config.GetType()));
+            // Save the config
+            var providerConfigPath = Path.Combine(providerDir, $"{id}.provider");
+            using var configStream = new FileStream(
+                providerConfigPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 4096,
+                useAsync: true
+            );
 
-            var provider = config.CreateProvider();
-            _providers.Add(provider);
+            await config.InitializeConfigAsync(id.ToString());
+            await config.CopyToStreamAsync(configStream);
+
+            // Initialize and create the provider
+            var provider = await config.CreateProviderAsync();
+            Providers.Add(provider);
             return provider;
         }
-        
-        public void RemoveProvider(string identifier)
+
+        public async Task RemoveProvider(string identifier)
         {
             var providerDir = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers");
             if (!Directory.Exists(providerDir))
@@ -96,13 +114,13 @@
                 File.Delete(file);
             }
 
-            var provider = _providers.FirstOrDefault(p => p.Identifier == identifier);
+            var provider = Providers.FirstOrDefault(p => p.Identifier == identifier);
             if (provider is null)
             {
                 return;
             }
 
-            _providers.Remove(provider);
+            Providers.Remove(provider);
         }
 
         public async Task CreateDirectory(string path)
@@ -143,7 +161,7 @@
                 current = next;
             }
 
-            foreach (var provider in _providers)
+            foreach (var provider in Providers)
             {
                 await provider.CreateDirectoryAsync(current);
             }
@@ -182,23 +200,40 @@
                 current = next;
             }
 
-            foreach (var provider in _providers)
+            foreach (var provider in Providers)
             {
                 await provider.DeleteAsync(current);
             }
         }
 
-        public async Task<ICollection<IStorageNode>> ListDirectory(string path)
+        public async Task<ICollection<IStorageNode>> ListDirectory(DirectoryNode node)
         {
-            if (path is null)
+            var nodes = new HashSet<IStorageNode>(new NodeNameEqualityComparer());
+            var tasks = Providers.Select(p => p.ListAsync(node));
+            var results = await Task.WhenAll(tasks);
+            foreach (var child in results.SelectMany(x => x))
+            {
+                nodes.Add(child);
+            }
+
+            return nodes;
+        }
+
+        public async Task UploadFile(string path, Stream content, IUploadBehavior? behaviorFile = default)
+        {
+            if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("Path cannot be null or empty.", nameof(path));
 
             // Normalize and split the path
             var segments = path.Trim().Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                throw new ArgumentException("Path must contain at least one segment.", nameof(path));
 
             DirectoryNode current = Root;
-            foreach (var segment in segments)
+            for (int i = 0; i < segments.Length - 1; i++)
             {
+                var segment = segments[i];
+
                 // Try to find an existing child directory node
                 DirectoryNode? next = null;
                 foreach (var child in current.Children)
@@ -210,24 +245,71 @@
                 }
 
                 // If not found, create a new DirectoryNode
-                if (next is null)
+                if (next == null)
                 {
-                    throw new ArgumentException(nameof(path), $"Directory '{path}' does not exist.");
+                    next = new DirectoryNode(segment)
+                    {
+                        Parent = current
+                    };
+                    current.Children.Add(next);
                 }
 
                 current = next;
             }
 
-            var nodes = new HashSet<IStorageNode>();
-            var tasks = _providers.Select(p => p.ListAsync(current));
-            var results = await Task.WhenAll(tasks);
-            foreach (var node in results.SelectMany(x => x))
+            var fileName = Path.GetFileName(path);
+            var fileNode = new FileNode(fileName)
             {
-                nodes.Add(node);
+                Parent = current
+            };
+            current.Children.Add(fileNode);
+
+            behaviorFile ??= new FirstProviderBehavior();
+            await behaviorFile.HandleUploadAsync(Providers, fileNode, content, CancellationToken.None);
+        }
+
+        public async Task RemoveFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+
+            // Normalize and split the path
+            var segments = path.Trim().Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                throw new ArgumentException("Path must contain at least one segment.", nameof(path));
+
+            DirectoryNode current = Root;
+            for (int i = 0; i < segments.Length - 1; i++)
+            {
+                var segment = segments[i];
+
+                // Try to find an existing child directory node
+                DirectoryNode? next = null;
+                foreach (var child in current.Children)
+                {
+                    if (child is DirectoryNode dir && dir.Name.Equals(segment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        next = dir;
+                    }
+                }
+
+                // If not found, create a new DirectoryNode
+                if (next == null)
+                {
+                    throw new FileNotFoundException("No file found at the specified path.", path);
+                }
+
+                current = next;
             }
 
-            current.Children = nodes;
-            return nodes;
+            var fileName = Path.GetFileName(path);
+            var fileNode = current.Children.FirstOrDefault(dir => (dir as FileNode)?.Name == fileName);
+            if (fileNode is null)
+            {
+                throw new FileNotFoundException("No file found at the specified path.", path);
+            }
+
+            await Task.WhenAll(Providers.Select(p => p.DeleteAsync(fileNode)));
         }
 
         public void Dispose()
@@ -237,5 +319,11 @@
             var structurePath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "structure.json");
             File.WriteAllText(structurePath, structure);
         }
+
+        public Task<IStorageProvider> GetProvider(string identifier) => throw new NotImplementedException();
+
+        public Task<bool> ExistsAsync(IStorageNode node) => throw new NotImplementedException();
+
+        public Task<Stream> OpenReadAsync(FileNode node, Func<ICollection<IStorageProvider>, IStorageProvider>? selector = null) => throw new NotImplementedException();
     }
 }

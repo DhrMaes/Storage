@@ -2,16 +2,17 @@
 {
 	using System.CommandLine;
 
-	using DhrMaes.Storage.Core;
+	using Grpc.Net.Client;
 
 	internal class ProviderCommand
 	{
-		internal static Command Create(Dmc dmc)
+		internal static Command Create(GrpcChannel channel)
 		{
-			var command = new Command("provider", "Manage providers");
-			command.AddCommand(AddProvider.Create(dmc));
-			command.AddCommand(RemoveProvider.Create(dmc));
-			command.AddCommand(ListProvider.Create(dmc));
+			var client = new Messages.ProviderService.ProviderServiceClient(channel);
+            var command = new Command("provider", "Manage providers");
+			command.AddCommand(AddProvider.Create(client));
+			command.AddCommand(RemoveProvider.Create(client));
+			command.AddCommand(ListProvider.Create(client));
 			return command;
 		}
 	}

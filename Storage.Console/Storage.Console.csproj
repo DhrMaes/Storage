@@ -6,6 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RootNamespace>DhrMaes.Storage.Console</RootNamespace>
+		<AssemblyName>DhrMaes.Storage.Console</AssemblyName>
 
 		<PackAsTool>true</PackAsTool>
 		<ToolCommandName>storage</ToolCommandName>
@@ -13,11 +14,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />
-	  <!--<ProjectReference Include="..\Storage.Provider.FileSystem\Storage.Provider.FileSystem.csproj" />-->
+		<ProjectReference Include="../Storage.Contracts/Storage.Contracts.csproj" />
+		<!--<ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />-->
+		<!--<ProjectReference Include="..\Storage.Provider.FileSystem\Storage.Provider.FileSystem.csproj" />-->
 	</ItemGroup>
 
 </Project>

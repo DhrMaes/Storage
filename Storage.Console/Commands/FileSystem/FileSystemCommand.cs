@@ -2,17 +2,24 @@
 {
 	using System.CommandLine;
 
-	using DhrMaes.Storage.Core;
+	using Grpc.Net.Client;
 
 	internal class FileSystemCommand
 	{
-		internal static Command Create(Dmc dmc)
+		internal static Command Create(GrpcChannel channel)
 		{
+			var client= new Messages.StorageService.StorageServiceClient(channel);
 			var command = new Command("fs", "File system operations");
-			command.AddCommand(Directory.MakeDirectory.Create(dmc));
-			command.AddCommand(Directory.RemoveDirectory.Create(dmc));
-			command.AddCommand(Directory.ListDirectory.Create(dmc));
-			return command;
+
+			// Directory commands
+            command.AddCommand(Directory.MakeDirectory.Create(client));
+			command.AddCommand(Directory.RemoveDirectory.Create(client));
+			command.AddCommand(Directory.ListDirectory.Create(client));
+			
+			// File commands
+			command.AddCommand(File.UploadFile.Create(client));
+			command.AddCommand(File.DeleteFile.Create(client));
+            return command;
 		}
 	}
 }

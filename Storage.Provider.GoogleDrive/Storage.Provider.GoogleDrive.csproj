@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<RootNamespace>DhrMaes.Storage.Provider.GoogleDrive</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Google.Apis.Drive.v3" Version="1.70.0.3893" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="credentials.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+</Project>

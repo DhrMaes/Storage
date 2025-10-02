@@ -2,15 +2,15 @@
 {
 	using System.CommandLine;
 
-	using DhrMaes.Storage.Core;
+	using Grpc.Net.Client;
 
 	internal class RootCommandFactory
 	{
-		internal static RootCommand Create(Dmc dmc)
+		internal static RootCommand Create(GrpcChannel channel)
 		{
 			var rootCommand = new RootCommand("DhrMaes.Storage.Console - A command line interface for DhrMaes.Storage");
-			rootCommand.AddCommand(Providers.ProviderCommand.Create(dmc));
-			rootCommand.AddCommand(FileSystem.FileSystemCommand.Create(dmc));
+			rootCommand.AddCommand(Providers.ProviderCommand.Create(channel));
+			rootCommand.AddCommand(FileSystem.FileSystemCommand.Create(channel));
 			return rootCommand;
 		}
 	}

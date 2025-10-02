@@ -1,0 +1,20 @@
+﻿syntax = "proto3";
+
+package DhrMaes.Storage.Messages;
+
+message StorageNodeProto {
+  oneof node_type {
+    FileNodeProto file = 1;
+    DirectoryNodeProto directory = 2;
+  }
+}
+
+message FileNodeProto {
+  string name = 1;
+  int64 size = 2;
+}
+
+message DirectoryNodeProto {
+  string name = 1;
+  repeated StorageNodeProto children = 2;
+}

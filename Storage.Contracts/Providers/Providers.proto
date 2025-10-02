@@ -1,0 +1,22 @@
+﻿syntax = "proto3";
+
+package DhrMaes.Storage.Messages;
+
+message ProviderConfig {
+  string name = 1;  
+  repeated ProviderConfigProperty properties = 2;
+}
+
+message ProviderConfigProperty {
+  string name = 1;
+  ProviderConfigPropertyType type = 2;
+}
+
+enum ProviderConfigPropertyType {
+  PROPERTY_TYPE_UNSPECIFIED = 0;
+  STRING = 1;
+  INT = 2;
+  BOOL = 3;
+  DOUBLE = 4;
+  ENUM = 5;
+}

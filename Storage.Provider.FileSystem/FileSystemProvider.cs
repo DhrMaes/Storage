@@ -13,8 +13,9 @@
     {
         private readonly string _path;
 
-        public FileSystemProvider(string path)
+        public FileSystemProvider(string identifier, string path)
         {
+            Identifier = identifier;
             _path = path;
         }
 
@@ -124,9 +125,10 @@
 
             items.AddRange(Directory
                 .GetFiles(fullPath)
-                .Select(f => new FileNode
+                .Select(f => new FileInfo(f))
+                .Select(f => new FileNode(f.Name)
                 {
-                    Name = Path.GetFileName(f),
+                    Size = f.Length,
                     Parent = node,
                 }));
 

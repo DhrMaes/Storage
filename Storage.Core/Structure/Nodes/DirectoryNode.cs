@@ -14,7 +14,52 @@
         public ICollection<IStorageNode> Children { get; set; } = new List<IStorageNode>();
 
         [JsonIgnore]
-        public IStorageNode? Parent { get; set; }
+        public DirectoryNode? Parent { get; set; }
+
+        public static DirectoryNode FromPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+            }
+
+            if (!path.StartsWith('/'))
+            {
+                throw new ArgumentException("Only supports absolute paths.");
+            }
+
+            // Normalize and split the path
+            var segments = path.Trim().Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+
+            DirectoryNode current = new DirectoryNode("Root");
+            foreach (var segment in segments)
+            {
+                // Try to find an existing child directory node
+                DirectoryNode? next = null;
+                foreach (var child in current.Children)
+                {
+                    if (child is DirectoryNode dir && dir.Name.Equals(segment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        next = dir;
+                    }
+                }
+
+                // If not found, create a new DirectoryNode
+                if (next == null)
+                {
+                    next = new DirectoryNode(segment)
+                    {
+                        Parent = current
+                    };
+
+                    current.Children.Add(next);
+                }
+
+                current = next;
+            }
+
+            return current;
+        }
 
         public string GetFullPath()
         {

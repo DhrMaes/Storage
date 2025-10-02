@@ -1,0 +1,38 @@
+﻿syntax = "proto3";
+
+package DhrMaes.Storage.Messages;
+
+import "Providers/Providers.proto";
+
+service ProviderService {
+    rpc AddProvider (AddProviderRequest) returns (AddProviderResponse);
+    rpc RemoveProvider (RemoveProviderRequest) returns (RemoveProviderResponse);
+    rpc ListProviders (ListProvidersRequest) returns (ListProvidersResponse);
+    rpc GetInstalledProviders(GetInstalledProvidersRequest) returns (GetInstalledProvidersResponse);
+}
+
+message AddProviderRequest {
+}
+
+message AddProviderResponse {
+}
+
+message ListProvidersRequest {
+}
+
+message ListProvidersResponse {
+}
+
+message RemoveProviderRequest {
+    string id = 1;
+}
+
+message RemoveProviderResponse {
+}
+
+message GetInstalledProvidersRequest {
+}
+
+message GetInstalledProvidersResponse {
+    repeated ProviderConfig providers = 1;
+}

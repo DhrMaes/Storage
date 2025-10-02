@@ -1,0 +1,24 @@
+<Project>
+  <!-- Custom publish step -->
+  <Target Name="CopyToAppData"
+          AfterTargets="Publish"
+          Condition="'$(MSBuildProjectName)' != '' and $(MSBuildProjectName.StartsWith('Storage.Provider.'))">
+
+    <PropertyGroup>
+      <PluginName>$([System.Text.RegularExpressions.Regex]::Replace('$(MSBuildProjectName)', '^Storage\.Provider\.', ''))</PluginName>
+      <AppDataPath>$(APPDATA)\DhrMaes\Storage\Plugins\$(PluginName)</AppDataPath>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(AppDataPath)" />
+
+    <!-- Use publish dir instead of output dir -->
+    <ItemGroup>
+      <FilesToCopy Include="$(PublishDir)\**\*.*"
+                   Exclude="$(PublishDir)\Storage.Core.dll;$(PublishDir)\Storage.Core.pdb" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(FilesToCopy)"
+          DestinationFolder="$(AppDataPath)"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

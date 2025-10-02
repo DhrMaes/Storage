@@ -2,14 +2,22 @@
 {
     using System.Text.Json.Serialization;
 
-    using DhrMaes.Storage.Core.Providers;
+	using DhrMaes.Storage.Core.FileSystem;
 
-    public class FileNode : IStorageNode
+	public class FileNode : IStorageNode
     {
+        public FileNode(string name)
+        {
+            Name = name;
+        }
+
         public string Name { get; set; }
 
         [JsonIgnore]
-        public IStorageNode? Parent { get; set; }
+        public FileSize Size { get; set; } = FileSize.Unknown;
+
+        [JsonIgnore]
+        public DirectoryNode? Parent { get; set; }
 
         public string GetFullPath()
         {
@@ -38,7 +46,7 @@
                 return false;
             }
 
-            if(this.GetFullPath() == otherFile.GetFullPath())
+            if (this.GetFullPath() == otherFile.GetFullPath())
             {
                 return true;
             }

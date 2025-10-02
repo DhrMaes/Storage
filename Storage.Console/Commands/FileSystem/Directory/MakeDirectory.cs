@@ -2,22 +2,21 @@
 {
 	using System.CommandLine;
 
-	using DhrMaes.Storage.Core;
-
 	internal class MakeDirectory
 	{
 		internal static Argument<string> PathArg = new Argument<string>(
 				name: "path",
 				description: "The full path of the directory to create");
 
-		internal static Command Create(Dmc dmc)
+		internal static Command Create(Messages.StorageService.StorageServiceClient client)
 		{
 			var command = new Command("mkdir", "Make a new directory");
 			command.AddArgument(PathArg);
 			command.SetHandler((path) =>
 			{
-				dmc.CreateDirectory(path);
-			}, PathArg);
+				System.Console.WriteLine("This feature is not yet implemented.");
+                //dmc.CreateDirectory(path);
+            }, PathArg);
 			return command;
 		}
 	}

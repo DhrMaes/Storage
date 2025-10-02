@@ -12,22 +12,4 @@
 		<ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />
 	</ItemGroup>
 
-	<Target Name="CopyToAppData" AfterTargets="Build">
-		<PropertyGroup>
-			<PluginName>$([System.Text.RegularExpressions.Regex]::Replace('$(MSBuildProjectName)', '^Storage\.Provider\.', ''))</PluginName>
-			<AppDataPath>$(APPDATA)\DhrMaes\Storage\Plugins\$(PluginName)</AppDataPath>
-		</PropertyGroup>
-		
-		<MakeDir Directories="$(AppDataPath)" />
-		
-		<ItemGroup>
-			<FilesToCopy Include="$(OutputPath)\**\*.*" Exclude="$(OutputPath)\Storage.Core.dll;$(OutputPath)\Storage.Core.pdb" />
-		</ItemGroup>
-		
-		<Copy
-			SourceFiles="@(FilesToCopy)"
-			DestinationFolder="$(AppDataPath)"
-			SkipUnchangedFiles="true" />
-	</Target>
-
 </Project>
