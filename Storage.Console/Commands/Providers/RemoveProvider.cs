@@ -3,7 +3,7 @@
 	using System;
 	using System.CommandLine;
 	
-    using DhrMaes.Storage.Messages;
+    using DhrMaes.Storage.Protobuf.Configuration.Providers.v1;
 
 	internal class RemoveProvider
 	{
@@ -19,10 +19,9 @@
             var command = new Command("remove", "Remove a provider");
             command.AddAlias("r");
             command.AddOption(idOption);
-            command.SetHandler((id) =>
+            command.SetHandler(async (id) =>
             {
-                Console.WriteLine("This feature is not yet implemented.");
-                //dmc.RemoveProvider(id);
+                await client.RemoveProviderAsync(new RemoveProviderRequest { Identifier = id });
             }, idOption);
             return command;
         }

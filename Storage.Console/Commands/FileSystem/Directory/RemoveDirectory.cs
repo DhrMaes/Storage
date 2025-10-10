@@ -2,20 +2,24 @@
 {
 	using System.CommandLine;
 
-	internal class RemoveDirectory
+	using DhrMaes.Storage.Protobuf.FileSystem.v1;
+
+    internal class RemoveDirectory
 	{
         internal static Argument<string> PathArg = new Argument<string>(
                 name: "path",
                 description: "The full path of the directory to remove");
 
-        internal static Command Create(Messages.StorageService.StorageServiceClient client)
+        internal static Command Create(StorageService.StorageServiceClient client)
 		{
 			var command = new Command("rmdir", "Remove a directory");
 			command.AddArgument(PathArg);
-			command.SetHandler((path) =>
+			command.SetHandler(async (path) =>
 			{
-				System.Console.WriteLine("This feature is not yet implemented.");
-                //dmc.RemoveDirectory(path);
+				await client.RemoveDirectoryAsync(new Protobuf.FileSystem.Directory.v1.RemoveDirectoryRequest
+				{
+					Path = path,
+                });
             }, PathArg);
             return command;
 		}

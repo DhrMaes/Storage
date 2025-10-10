@@ -5,11 +5,11 @@
 	using System.CommandLine;
 	using System.CommandLine.Invocation;
 
-	using DhrMaes.Storage.Messages;
+	using DhrMaes.Storage.Protobuf.Configuration.Providers.v1;
 
 	internal class AddProvider
 	{
-        internal static Command Create(DhrMaes.Storage.Messages.ProviderService.ProviderServiceClient client)
+        internal static Command Create(ProviderService.ProviderServiceClient client)
         {
             var command = new Command("add", "Add a new provider");
             command.AddAlias("a");
@@ -22,9 +22,9 @@
             return command;
         }
 
-        private static IEnumerable<Command> LoadProviderCommands(Messages.ProviderService.ProviderServiceClient client)
+        private static IEnumerable<Command> LoadProviderCommands(ProviderService.ProviderServiceClient client)
         {
-            var response = client.GetInstalledProviders(new Messages.GetInstalledProvidersRequest());
+            var response = client.GetInstalledProviders(new GetInstalledProvidersRequest());
             foreach (var provider in response.Providers)
             {
                 var command = new Command(provider.Name, $"Add a new {provider.Name} provider");
@@ -40,19 +40,33 @@
 
                 command.SetHandler(async (InvocationContext ctx) =>
                 {
-                    Console.WriteLine("This feature is not yet implemented.");
-                    //var config = Activator.CreateInstance(kvp.Value)! as IStorageProviderConfig;
+                    var request = new ProviderConfig
+                    {
+                        Name = provider.Name,
+                    };
 
-                    //foreach (var (prop, opt) in options)
-                    //{
-                    //    var value = ctx.ParseResult.GetValueForOption(opt);
-                    //    if (value is not null)
-                    //    {
-                    //        prop.SetValue(config, value);
-                    //    }
-                    //}
+                    foreach (var (prop, opt) in options)
+                    {
+                        var value = ctx.ParseResult.GetValueForOption(opt);
+                        if (value is not null)
+                        {
+                            var propConfig = new ProviderConfigProperty
+                            {
+                                Name = prop.Name,
+                                Type = prop.Type,
+                            };
 
-                    //await dmc.AddProvider(config);
+                            propConfig.SetValue(value);
+                            request.Properties.Add(propConfig);
+                        }
+                    }
+
+                    var response = await client.AddProviderAsync(new AddProviderRequest
+                    {
+                        Provider = request,
+                    });
+
+                    Console.WriteLine($"Provider '{response.Identifier}' of type '{provider.Name}' added.");
                 });
 
                 yield return command;

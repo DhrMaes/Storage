@@ -1,0 +1,15 @@
+﻿syntax = "proto3";
+
+package dhrmaes.storage.protobuf.filesystem.directory.v1;
+
+import "Protos/Structure.proto";
+
+option csharp_namespace = "DhrMaes.Storage.Protobuf.FileSystem.Directory.v1";
+
+message ListDirectoryRequest {
+  string path = 1;
+}
+
+message ListDirectoryResponse {
+  repeated dhrmaes.storage.protobuf.structure.v1.StorageNode nodes = 1;
+}

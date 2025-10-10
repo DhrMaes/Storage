@@ -2,7 +2,13 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
+		<RootNamespace>DhrMaes.Storage</RootNamespace>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Protobuf Include="Protos\FileSystem\Directory\remove_directory_v1.proto" />
+	  <Protobuf Include="Protos\FileSystem\Directory\make_directory_v1.proto" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.32.1" />
@@ -14,10 +20,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Protobuf Include="Structure.proto" GrpcServices="None" />
-		<Protobuf Include="FileSystem/Directory.proto" GrpcServices="Both" />
-		<Protobuf Include="Providers/Providers.proto" GrpcServices="None"/>
-		<Protobuf Include="Providers/ProviderService.proto" GrpcServices="Both"/>
+		<Protobuf Include="Protos\FileSystem\StorageService.proto" GrpcServices="Both" />
+		<Protobuf Include="Protos\Structure.proto" GrpcServices="None" />
+		<Protobuf Include="Protos\FileSystem\Directory\list_directory_v1.proto" GrpcServices="Both" />
+		<Protobuf Include="Protos\FileSystem\Directory\make_directory_v1.proto" GrpcServices="Both" />
+		<Protobuf Include="Protos\FileSystem\Directory\remove_directory_v1.proto" GrpcServices="Both" />
+		<Protobuf Include="Protos\Configuration\Providers.proto" GrpcServices="None" />
+		<Protobuf Include="Protos\Configuration\ProviderService.proto" GrpcServices="Both" />
 	</ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 {
     using System.Threading.Tasks;
 
-    using DhrMaes.Storage.Messages;
+    using DhrMaes.Storage.Protobuf.FileSystem.Directory.v1;
 
     using DhrMaes.Storage.Core;
 	using DhrMaes.Storage.Core.Structure.Nodes;
@@ -11,14 +11,14 @@
 
 	using DhrMaes.Storage.Server.Nodes;
 
-	public class DirectoryService : StorageService.StorageServiceBase
+	public class StorageService : DhrMaes.Storage.Protobuf.FileSystem.v1.StorageService.StorageServiceBase
     {
         private readonly IDmc _dmc;
-        private readonly ILogger<DirectoryService> _logger;
+        private readonly ILogger<StorageService> _logger;
 
-        public DirectoryService(
+        public StorageService(
             IDmc dmc,
-            ILogger<DirectoryService> logger)
+            ILogger<StorageService> logger)
         {
             _dmc = dmc ?? throw new ArgumentNullException(nameof(dmc));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

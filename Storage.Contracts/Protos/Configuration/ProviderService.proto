@@ -1,8 +1,10 @@
 ﻿syntax = "proto3";
 
-package DhrMaes.Storage.Messages;
+package dhrmaes.storage.protobuf.configuration.providers.v1;
 
-import "Providers/Providers.proto";
+import "Protos/Configuration/Providers.proto";
+
+option csharp_namespace = "DhrMaes.Storage.Protobuf.Configuration.Providers.v1";
 
 service ProviderService {
     rpc AddProvider (AddProviderRequest) returns (AddProviderResponse);
@@ -12,19 +14,22 @@ service ProviderService {
 }
 
 message AddProviderRequest {
+    ProviderConfig provider = 1;
 }
 
 message AddProviderResponse {
+    string identifier = 1;
 }
 
 message ListProvidersRequest {
 }
 
 message ListProvidersResponse {
+    repeated Provider providers = 1;
 }
 
 message RemoveProviderRequest {
-    string id = 1;
+    string identifier = 1;
 }
 
 message RemoveProviderResponse {

@@ -4,11 +4,13 @@
 
 	using Grpc.Net.Client;
 
-	internal class FileSystemCommand
+	using DhrMaes.Storage.Protobuf.FileSystem.v1;
+
+    internal class FileSystemCommand
 	{
 		internal static Command Create(GrpcChannel channel)
 		{
-			var client= new Messages.StorageService.StorageServiceClient(channel);
+			var client= new StorageService.StorageServiceClient(channel);
 			var command = new Command("fs", "File system operations");
 
 			// Directory commands

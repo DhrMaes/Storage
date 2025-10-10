@@ -2,6 +2,8 @@
 {
     using System.CommandLine;
 
+    using DhrMaes.Storage.Protobuf.FileSystem.v1;
+
     internal class UploadFile
     {
         internal static Argument<string> PathArg = new Argument<string>(
@@ -12,7 +14,7 @@
                 name: "uploadPath",
                 description: "The destination path where the file will be uploaded to");
 
-        internal static Command Create(Messages.StorageService.StorageServiceClient client)
+        internal static Command Create(StorageService.StorageServiceClient client)
         {
             var command = new Command("upload", "Upload a new file");
             command.AddArgument(PathArg);

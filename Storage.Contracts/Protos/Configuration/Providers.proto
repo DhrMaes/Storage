@@ -1,0 +1,35 @@
+﻿syntax = "proto3";
+
+package dhrmaes.storage.protobuf.configuration.providers.v1;
+
+option csharp_namespace = "DhrMaes.Storage.Protobuf.Configuration.Providers.v1";
+
+message Provider {
+    string type = 1;
+    string identifier = 2;
+}
+
+message ProviderConfig {
+  string name = 1;  
+  repeated ProviderConfigProperty properties = 2;
+}
+
+message ProviderConfigProperty {
+  string name = 1;
+  ProviderConfigPropertyType type = 2;
+  oneof value {
+    string string_value = 3;
+    int32 int_value = 4;
+    bool bool_value = 5;
+    double double_value = 6;
+    string enum_value = 7;
+  }
+}
+
+enum ProviderConfigPropertyType {
+  PROPERTY_TYPE_UNSPECIFIED = 0;
+  STRING = 1;
+  INT = 2;
+  BOOL = 3;
+  DOUBLE = 4;
+}

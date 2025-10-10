@@ -4,11 +4,13 @@
 
 	using Grpc.Net.Client;
 
-	internal class ProviderCommand
+	using DhrMaes.Storage.Protobuf.Configuration.Providers.v1;
+
+    internal class ProviderCommand
 	{
 		internal static Command Create(GrpcChannel channel)
 		{
-			var client = new Messages.ProviderService.ProviderServiceClient(channel);
+			var client = new ProviderService.ProviderServiceClient(channel);
             var command = new Command("provider", "Manage providers");
 			command.AddCommand(AddProvider.Create(client));
 			command.AddCommand(RemoveProvider.Create(client));

@@ -15,26 +15,13 @@
     public class Dmc : IDmc, IDisposable
     {
         private readonly PluginLoader _pluginLoader;
-        private readonly Lazy<ICollection<IStorageProvider>> _providers;
         private readonly Lazy<DirectoryNode> _root;
+
+        private List<IStorageProvider>? _providers;
 
         public Dmc()
         {
             _pluginLoader = new PluginLoader();
-            _providers = new Lazy<ICollection<IStorageProvider>>(() =>
-            {
-                var providers = new List<IStorageProvider>();
-                var providerPath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers");
-                foreach (var configPath in Directory.GetFiles(providerPath, "*.provider", SearchOption.AllDirectories))
-                {
-                    var loadTask = PluginLoader.LoadProvider(configPath);
-                    loadTask.Wait();
-                    var provider = loadTask.Result;
-                    providers.Add(provider);
-                }
-
-                return providers;
-            });
             _root = new Lazy<DirectoryNode>(() =>
             {
                 var structurePath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "structure.json");
@@ -55,9 +42,21 @@
 
         public PluginLoader PluginLoader => _pluginLoader;
 
-        public ICollection<IStorageProvider> Providers => _providers.Value;
-
         public DirectoryNode Root => _root.Value;
+
+        public IReadOnlyList<IStorageProvider> Providers
+        {
+            get
+            {
+                if (_providers is null)
+                {
+                    var providerTask = ListProviders();
+                    providerTask.Wait();
+                }
+
+                return _providers!;
+            }
+        }
 
         public async Task<IReadOnlyDictionary<string, Type>> GetInstalledProviders()
         {
@@ -95,9 +94,24 @@
             await config.CopyToStreamAsync(configStream);
 
             // Initialize and create the provider
+            await ListProviders();
             var provider = await config.CreateProviderAsync();
-            Providers.Add(provider);
+            _providers!.Add(provider);
             return provider;
+        }
+
+        public async Task<IReadOnlyList<IStorageProvider>> ListProviders()
+        {
+            var providers = new List<IStorageProvider>();
+            var providerPath = Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Providers");
+            foreach (var configPath in Directory.GetFiles(providerPath, "*.provider", SearchOption.AllDirectories))
+            {
+                var provider = await PluginLoader.LoadProvider(configPath);
+                providers.Add(provider);
+            }
+
+            _providers = providers;
+            return providers;
         }
 
         public async Task RemoveProvider(string identifier)
@@ -108,7 +122,7 @@
                 return;
             }
 
-            var files = Directory.GetFiles(providerDir, "{identifier}.provider", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(providerDir, $"{identifier}.provider", SearchOption.AllDirectories);
             foreach (var file in files)
             {
                 File.Delete(file);
@@ -120,7 +134,7 @@
                 return;
             }
 
-            Providers.Remove(provider);
+            _providers!.Remove(provider);
         }
 
         public async Task CreateDirectory(string path)
@@ -265,7 +279,7 @@
             current.Children.Add(fileNode);
 
             behaviorFile ??= new FirstProviderBehavior();
-            await behaviorFile.HandleUploadAsync(Providers, fileNode, content, CancellationToken.None);
+            await behaviorFile.HandleUploadAsync(Providers.ToList(), fileNode, content, CancellationToken.None);
         }
 
         public async Task RemoveFile(string path)

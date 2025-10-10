@@ -64,7 +64,19 @@
             //    "add", "--help",
             //};
 
-            using var channel = GrpcChannel.ForAddress("http://localhost:32794");
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);// Add explicit channel options
+            var channelOptions = new GrpcChannelOptions
+            {
+                HttpHandler = new SocketsHttpHandler
+                {
+                    EnableMultipleHttp2Connections = true,
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                    PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan
+                }
+            };
+
+            using var channel = GrpcChannel.ForAddress("http://localhost:32798", channelOptions);
             if (channel is null)
             {
                 throw new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.Internal, "Failed to create gRPC channel."));

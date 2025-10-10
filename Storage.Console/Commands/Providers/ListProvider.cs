@@ -3,7 +3,7 @@
 	using System;
 	using System.CommandLine;
 	
-	using DhrMaes.Storage.Messages;
+	using DhrMaes.Storage.Protobuf.Configuration.Providers.v1;
 
 	internal class ListProvider
 	{
@@ -11,16 +11,14 @@
 		{
 			var command = new Command("list", "List all configured providers");
 			command.AddAlias("ls");
-			command.SetHandler(() =>
+			command.SetHandler(async () =>
 			{
-				Console.WriteLine("This feature is not yet implemented.");
-                //foreach (var provider in dmc.Providers)
-                //{
-                //	var type = provider.GetType();
-                //	var providerType = type.GetCustomAttribute<ProviderIdentifierAttribute>()?.Id ?? "Unknown";
-                //                Console.WriteLine($"[{providerType}]:\t{provider.Identifier}");
-                //}
-            });
+				var response = await client.ListProvidersAsync(new ListProvidersRequest());
+                foreach (var provider in response.Providers)
+				{
+					Console.WriteLine($"[{provider.Type}]:\t{provider.Identifier}");
+				}
+			});
 			return command;
         }
     }
