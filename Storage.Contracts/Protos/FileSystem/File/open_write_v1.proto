@@ -1,0 +1,20 @@
+﻿syntax = "proto3";
+
+package dhrmaes.storage.protobuf.filesystem.file.v1;
+
+import "Protos/FileSystem/File/file_v1.proto";
+
+option csharp_namespace = "DhrMaes.Storage.Protobuf.FileSystem.File.v1";
+
+message OpenWriteRequest {
+  oneof payload {
+    dhrmaes.storage.protobuf.filesystem.file.v1.FileInfo info = 1;          // First message: metadata
+    dhrmaes.storage.protobuf.filesystem.file.v1.FileChunk chunk = 2;        // Rest: chunks of data
+  }
+}
+
+message OpenWriteResponse {
+  bool success = 1;
+  string message = 2;
+  string saved_path = 3;
+}

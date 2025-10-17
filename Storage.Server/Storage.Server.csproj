@@ -15,11 +15,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!--<Protobuf Include="..\Storage.Contracts\Structure.proto" GrpcServices="None" ProtoRoot="..\Storage.Contracts" />-->
-		<!--<Protobuf Include="..\Storage.Contracts\FileSystem\Directory.proto" GrpcServices="Server" ProtoRoot="..\Storage.Contracts" />-->
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\Storage.Contracts\Storage.Contracts.csproj" />
 		<ProjectReference Include="..\Storage.Core\Storage.Core.csproj" />
 	</ItemGroup>

@@ -21,15 +21,45 @@
             command.AddArgument(UploadPathArg);
             command.SetHandler(async (path, uploadPath) =>
             {
-                System.Console.WriteLine("This feature is not yet implemented.");
-                //if(!System.IO.File.Exists(path))
-                //{
-                //    System.Console.WriteLine($"File '{path}' does not exist.");
-                //    return;
-                //}
+                using var call = client.OpenWrite();
+                var fileInfo = new FileInfo(path);
+                var sha256 = System.Security.Cryptography.SHA256.HashData(System.IO.File.ReadAllBytes(path));
 
-                //var fileStream = System.IO.File.OpenRead(path);
-                //await dmc.UploadFile(uploadPath, fileStream);
+                // Send metadata
+                await call.RequestStream.WriteAsync(new Protobuf.FileSystem.File.v1.OpenWriteRequest
+                {
+                    Info = new Protobuf.FileSystem.File.v1.FileInfo
+                    {
+                        FileName = uploadPath,
+                        FileSize = fileInfo.Length,
+                        Sha256 = System.Convert.ToBase64String(sha256),
+                    }
+                });
+
+                var buffer = new byte[64 * 1024];
+                var offset = 0l;
+
+                await using var stream = System.IO.File.OpenRead(path);
+                int bytesRead;
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await call.RequestStream.WriteAsync(new Protobuf.FileSystem.File.v1.OpenWriteRequest
+                    {
+                        Chunk = new Protobuf.FileSystem.File.v1.FileChunk
+                        {
+                            Offset = offset,
+                            Content = Google.Protobuf.ByteString.CopyFrom(buffer, 0, bytesRead)
+                        }
+                    });
+
+                    offset += bytesRead;
+                }
+
+                await call.RequestStream.CompleteAsync();
+
+                var response = await call.ResponseAsync;
+                System.Console.WriteLine($"Server: {response.Message} (saved: {response.SavedPath})");
+
             }, PathArg, UploadPathArg);
             return command;
         }

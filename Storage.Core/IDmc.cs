@@ -2,7 +2,8 @@
 {
     using DhrMaes.Storage.Core.Plugins;
     using DhrMaes.Storage.Core.Providers;
-    using DhrMaes.Storage.Core.Structure.Nodes;
+	using DhrMaes.Storage.Core.Structure.File;
+	using DhrMaes.Storage.Core.Structure.Nodes;
 
     public interface IDmc
     {
@@ -23,5 +24,7 @@
         Task<bool> ExistsAsync(IStorageNode node);
 
         Task<Stream> OpenReadAsync(FileNode node, Func<ICollection<IStorageProvider>, IStorageProvider>? selector = null);
+        
+        Task<Stream> OpenWriteAsync(FileNode node, IUploadBehavior? behaviorFile = default);
     }
 }

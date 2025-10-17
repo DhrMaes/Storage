@@ -6,8 +6,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Protobuf Include="Protos\FileSystem\Directory\remove_directory_v1.proto" />
-	  <Protobuf Include="Protos\FileSystem\Directory\make_directory_v1.proto" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -20,11 +18,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Protobuf Include="Protos\FileSystem\StorageService.proto" GrpcServices="Both" />
 		<Protobuf Include="Protos\Structure.proto" GrpcServices="None" />
+		<Protobuf Include="Protos\FileSystem\StorageService.proto" GrpcServices="Both" />
 		<Protobuf Include="Protos\FileSystem\Directory\list_directory_v1.proto" GrpcServices="Both" />
 		<Protobuf Include="Protos\FileSystem\Directory\make_directory_v1.proto" GrpcServices="Both" />
 		<Protobuf Include="Protos\FileSystem\Directory\remove_directory_v1.proto" GrpcServices="Both" />
+		<Protobuf Include="Protos\FileSystem\File\file_v1.proto" GrpcServices="None" />
+		<Protobuf Include="Protos\FileSystem\File\open_read_v1.proto" GrpcServices="Both" />
+		<Protobuf Include="Protos\FileSystem\File\open_write_v1.proto" GrpcServices="Both" />
 		<Protobuf Include="Protos\Configuration\Providers.proto" GrpcServices="None" />
 		<Protobuf Include="Protos\Configuration\ProviderService.proto" GrpcServices="Both" />
 	</ItemGroup>

@@ -2,21 +2,19 @@
 {
     using System.Text.Json.Serialization;
 
-    public class DirectoryNode : IDirectoryNode
+    public struct DirectoryNodeReference : IDirectoryNode
     {
-        public DirectoryNode(string name)
+        public DirectoryNodeReference(string name)
         {
             Name = name;
         }
 
         public string Name { get; set; }
 
-        public ICollection<IStorageNode> Children { get; set; } = new List<IStorageNode>();
-
         [JsonIgnore]
         public DirectoryNode? Parent { get; set; }
 
-        public static DirectoryNode FromPath(string path)
+        public static DirectoryNodeReference FromPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -61,6 +59,11 @@
             return current;
         }
 
+        public DirectoryNode GetFullNode()
+        {
+            
+        }
+
         public string GetFullPath()
         {
             if (Parent is null)
@@ -94,11 +97,6 @@
             }
 
             return false;
-        }
-
-		public override bool Equals(object? obj)
-        {
-            return Equals(obj as DirectoryNode);
         }
 
         public override int GetHashCode()

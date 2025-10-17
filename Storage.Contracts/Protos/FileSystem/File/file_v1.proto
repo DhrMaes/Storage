@@ -1,0 +1,16 @@
+﻿syntax = "proto3";
+
+package dhrmaes.storage.protobuf.filesystem.file.v1;
+
+option csharp_namespace = "DhrMaes.Storage.Protobuf.FileSystem.File.v1";
+
+message FileInfo {
+  string file_name = 1;
+  int64 file_size = 2;
+  string sha256 = 3;
+}
+
+message FileChunk {
+  bytes content = 1;
+  int64 offset = 2;
+}

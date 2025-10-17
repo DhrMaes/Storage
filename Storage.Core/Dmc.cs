@@ -339,5 +339,7 @@
         public Task<bool> ExistsAsync(IStorageNode node) => throw new NotImplementedException();
 
         public Task<Stream> OpenReadAsync(FileNode node, Func<ICollection<IStorageProvider>, IStorageProvider>? selector = null) => throw new NotImplementedException();
-    }
+
+        public Task<Stream> OpenWriteAsync(FileNode node, IUploadBehavior? behaviorFile = default) => throw new NotImplementedException();
+	}
 }
