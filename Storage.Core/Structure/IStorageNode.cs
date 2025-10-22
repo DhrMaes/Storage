@@ -1,14 +1,17 @@
-﻿namespace DhrMaes.Storage.Core.Structure.Nodes
+﻿namespace DhrMaes.Storage.Core.Structure
 {
-    using System.Text.Json.Serialization;
+	using System.Text.Json.Serialization;
 
-    [JsonPolymorphic(TypeDiscriminatorPropertyName = "NodeType")]
+	using DhrMaes.Storage.Core.Structure.File;
+	using DhrMaes.Storage.Core.Structure.Directory;
+
+	[JsonPolymorphic(TypeDiscriminatorPropertyName = "NodeType")]
     [JsonDerivedType(typeof(FileNode), "File")]
     [JsonDerivedType(typeof(DirectoryNode), "Directory")]
     public interface IStorageNode : IEquatable<IStorageNode>
     {
         [JsonIgnore]
-        public DirectoryNode? Parent { get; set; }
+        public IDirectoryNode? Parent { get; set; }
 
         public string Name { get; set; }
 

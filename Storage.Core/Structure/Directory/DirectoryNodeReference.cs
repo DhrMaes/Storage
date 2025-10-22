@@ -1,9 +1,15 @@
-﻿namespace DhrMaes.Storage.Core.Structure.Nodes
+﻿namespace DhrMaes.Storage.Core.Structure.Directory
 {
-    using System.Text.Json.Serialization;
+	using System;
+	using System.Diagnostics.CodeAnalysis;
+	using System.Text.Json.Serialization;
 
-    public struct DirectoryNodeReference : IDirectoryNode
+	using DhrMaes.Storage.Core.Structure;
+
+	public struct DirectoryNodeReference : IDirectoryNode, IEquatable<DirectoryNodeReference>
     {
+        public static readonly DirectoryNodeReference Root = new DirectoryNodeReference("Root");
+
         public DirectoryNodeReference(string name)
         {
             Name = name;
@@ -12,9 +18,9 @@
         public string Name { get; set; }
 
         [JsonIgnore]
-        public DirectoryNode? Parent { get; set; }
+        public IDirectoryNode? Parent { get; set; }
 
-        public static DirectoryNodeReference FromPath(string path)
+		public static DirectoryNodeReference FromPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -29,39 +35,24 @@
             // Normalize and split the path
             var segments = path.Trim().Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
 
-            DirectoryNode current = new DirectoryNode("Root");
+            DirectoryNodeReference current = Root;
             foreach (var segment in segments)
             {
-                // Try to find an existing child directory node
-                DirectoryNode? next = null;
-                foreach (var child in current.Children)
+                current = new DirectoryNodeReference(segment)
                 {
-                    if (child is DirectoryNode dir && dir.Name.Equals(segment, StringComparison.OrdinalIgnoreCase))
-                    {
-                        next = dir;
-                    }
-                }
-
-                // If not found, create a new DirectoryNode
-                if (next == null)
-                {
-                    next = new DirectoryNode(segment)
-                    {
-                        Parent = current
-                    };
-
-                    current.Children.Add(next);
-                }
-
-                current = next;
+                    Parent = current,
+                };
             }
 
             return current;
         }
 
-        public DirectoryNode GetFullNode()
+        public DirectoryNode ToDirectoryNode(IStorage storage)
         {
-            
+            return new DirectoryNode(storage, this)
+            {
+                Parent = Parent,
+            };
         }
 
         public string GetFullPath()
@@ -76,22 +67,22 @@
 
         public void Accept(INodeVisitor visitor)
         {
-            visitor.VisitDirectoryNode(this);
+            visitor.VisitDirectoryNodeReference(this);
         }
 
         public bool Equals(IStorageNode? other)
         {
-            if (ReferenceEquals(this, other))
-            {
-                return true;
-            }
-
-            if (!(other is DirectoryNode otherDir))
+            if (!(other is DirectoryNodeReference otherDir))
             {
                 return false;
             }
 
-            if (this.GetFullPath() == otherDir.GetFullPath())
+            return Equals(otherDir);
+        }
+
+		public bool Equals(DirectoryNodeReference other)
+        {
+            if (this.GetFullPath() == other.GetFullPath())
             {
                 return true;
             }
@@ -99,9 +90,15 @@
             return false;
         }
 
+		public override bool Equals([NotNullWhen(true)] object? obj)
+        {
+            return Equals(obj as IStorageNode);
+        }
+
         public override int GetHashCode()
         {
             return $"Directory:{GetFullPath()}".GetHashCode();
         }
-    }
+
+	}
 }

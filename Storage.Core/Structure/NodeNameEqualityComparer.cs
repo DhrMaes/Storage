@@ -1,13 +1,13 @@
-﻿namespace DhrMaes.Storage.Core.Structure.Nodes
+﻿namespace DhrMaes.Storage.Core.Structure
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
+	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics.CodeAnalysis;
+	using System.Linq;
+	using System.Text;
+	using System.Threading.Tasks;
 
-    internal class NodeNameEqualityComparer : IEqualityComparer<IStorageNode>
+	internal class NodeNameEqualityComparer : IEqualityComparer<IStorageNode>
     {
         public bool Equals(IStorageNode? x, IStorageNode? y)
         {

@@ -1,11 +1,14 @@
 ﻿namespace DhrMaes.Storage.Core.Structure
 {
-	using DhrMaes.Storage.Core.Structure.Nodes;
+	using DhrMaes.Storage.Core.Structure.File;
+	using DhrMaes.Storage.Core.Structure.Directory;
 
 	public interface INodeVisitor
 	{
 		void VisitFileNode(FileNode node);
+		void VisitFileNodeReference(FileNodeReference node);
 		void VisitDirectoryNode(DirectoryNode node);
+		void VisitDirectoryNodeReference(DirectoryNodeReference node);
 	}
 
 	public class NodeVisitor : INodeVisitor
@@ -29,9 +32,19 @@
 			VisitDefault(node);
 		}
 
-		public virtual void VisitDirectoryNode(DirectoryNode node)
+		public virtual void VisitFileNodeReference(FileNodeReference node)
+		{
+			VisitDefault(node);
+        }
+
+        public virtual void VisitDirectoryNode(DirectoryNode node)
 		{
 			VisitDefault(node);
 		}
-	}
+
+		public virtual void VisitDirectoryNodeReference(DirectoryNodeReference node)
+		{
+			VisitDefault(node);
+        }
+    }
 }

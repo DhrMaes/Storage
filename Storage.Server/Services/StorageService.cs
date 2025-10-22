@@ -11,8 +11,10 @@
 
     using DhrMaes.Storage.Server.Nodes;
     using DhrMaes.Storage.Protobuf.FileSystem.File.v1;
+	using DhrMaes.Storage.Core.Structure;
+	using DhrMaes.Storage.Core.Structure.File;
 
-    public class StorageService : DhrMaes.Storage.Protobuf.FileSystem.v1.StorageService.StorageServiceBase
+	public class StorageService : DhrMaes.Storage.Protobuf.FileSystem.v1.StorageService.StorageServiceBase
     {
         private readonly IDmc _dmc;
         private readonly ILogger<StorageService> _logger;

@@ -6,7 +6,9 @@
     using System.Threading.Tasks;
 
     using DhrMaes.Storage.Core.Providers;
-    using DhrMaes.Storage.Core.Structure.Nodes;
+	using DhrMaes.Storage.Core.Structure;
+	using DhrMaes.Storage.Core.Structure.File;
+	using DhrMaes.Storage.Core.Structure.Nodes;
 
     [ProviderIdentifier("FileSystem")]
     public class FileSystemProvider : IStorageProvider

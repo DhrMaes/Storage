@@ -1,16 +1,17 @@
 ﻿namespace DhrMaes.Storage.Core.Plugins
 {
+    using System.Collections.ObjectModel;
     using System.Reflection;
     using System.Runtime.Loader;
-    using System.Text.Json;
 
     using DhrMaes.Storage.Core.Providers;
 
     public class PluginLoader
     {
         private readonly string _pluginPath;
+        private readonly List<IStoragePlugin> _plugins = new List<IStoragePlugin>();
 
-        private readonly IDictionary<string, Type> _providerTypes;
+        private bool _initialized = false;
 
         public PluginLoader() : this(Path.Combine(FileSystem.FileSystem.GetUserConfigDir(), "Plugins"))
         {
@@ -19,22 +20,57 @@
         public PluginLoader(string pluginPath)
         {
             _pluginPath = pluginPath;
-            _providerTypes = LoadStorageProviderTypes();
         }
 
-        public IReadOnlyDictionary<string, Type> ConfigTypes => (IReadOnlyDictionary<string, Type>)_providerTypes;
+        public event EventHandler<EventArgs> Loaded;
+
+        public event EventHandler<EventArgs> Reloaded;
+
+        public bool IsInitialized => _initialized;
+
+        public IReadOnlyCollection<IStoragePlugin> Plugins => new ReadOnlyCollection<IStoragePlugin>(_plugins);
+
+        public IStoragePlugin GetPlugin(string identifier)
+        {
+            var plugin = _plugins.FirstOrDefault(p => p.Name.Equals(identifier, StringComparison.OrdinalIgnoreCase));
+            if (plugin is null)
+            {
+                throw new InvalidOperationException($"No plugin found with identifier '{identifier}'.");
+            }
+
+            return plugin;
+        }
 
         /// <summary>
         /// Load all available storage provider types from the plugins directory.
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, Type> LoadStorageProviderTypes()
+        public void LoadPlugins()
         {
-            var providerTypes = new Dictionary<string, Type>();
+            if(_initialized)
+            {
+                return;
+            }
 
+            _plugins.Clear();
+            InternalLoadPlugins();
+            _initialized = true;
+            Loaded?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void ReloadPlugins()
+        {
+            _plugins.Clear();
+            InternalLoadPlugins();
+            _initialized = true;
+            Reloaded?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void InternalLoadPlugins()
+        {
             if (!Directory.Exists(_pluginPath))
             {
-                return providerTypes;
+                throw new InvalidOperationException($"Plugin directory not found: {_pluginPath}");
             }
 
             foreach (var dir in Directory.GetDirectories(_pluginPath, "*", SearchOption.TopDirectoryOnly))
@@ -48,7 +84,9 @@
                         continue;
                     }
 
-                    var types = assembly.GetTypes()
+                    var types = assembly.GetTypes();
+
+                    var configTypes = types
                         .Where(t => typeof(IStorageProviderConfig).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
                         .Select(t => new
                         {
@@ -56,20 +94,30 @@
                             Type = t,
                         })
                         .Where(m => m.Identifier is not null)
-                        .Select(m => new KeyValuePair<string, Type>(m.Identifier!.Id, m.Type))
-                        .ToList();
+                        .ToDictionary(m => m.Identifier!.Id, m => m.Type);
 
-                    foreach (var type in types)
-                    {
-                        if (!providerTypes.TryAdd(type.Key, type.Value))
+                    var providerTypes = types
+                        .Where(t => typeof(IStorageProvider).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+                        .Select(t => new
                         {
-                            throw new InvalidOperationException($"Duplicate provider identifier '{type.Key}' found in plugin '{file}'.");
+                            Identifier = t.GetCustomAttribute<ProviderIdentifierAttribute>(),
+                            Type = t,
+                        })
+                        .Where(m => m.Identifier is not null)
+                        .ToDictionary(m => m.Identifier!.Id, m => m.Type);
+
+                    foreach (var provider in configTypes.Keys)
+                    {
+                        var configType = configTypes[provider];
+                        if (!providerTypes.TryGetValue(provider, out var providerType))
+                        {
+                            continue;
                         }
+
+                        _plugins.Add(new StoragePlugin(provider, configType, providerType));
                     }
                 }
             }
-
-            return providerTypes;
         }
 
         public async Task<IStorageProvider> LoadProvider(string configPath)

@@ -7,7 +7,9 @@
 
 	using DhrMaes.Storage.Core.FileSystem;
 	using DhrMaes.Storage.Core.Providers;
-    using DhrMaes.Storage.Core.Structure.Nodes;
+	using DhrMaes.Storage.Core.Structure;
+	using DhrMaes.Storage.Core.Structure.File;
+	using DhrMaes.Storage.Core.Structure.Nodes;
 
     using Google.Apis.Drive.v3;
 

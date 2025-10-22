@@ -1,6 +1,8 @@
 ﻿namespace DhrMaes.Storage.Server.Nodes
 {
-    using DhrMaes.Storage.Protobuf.Structure.v1;
+	using DhrMaes.Storage.Core.Structure;
+	using DhrMaes.Storage.Core.Structure.File;
+	using DhrMaes.Storage.Protobuf.Structure.v1;
 
     public class NodeTranslator : DhrMaes.Storage.Core.Structure.NodeWalker
     {
@@ -11,14 +13,14 @@
             _result = null;
         }
 
-        public static StorageNode? Translate(DhrMaes.Storage.Core.Structure.Nodes.IStorageNode node)
+        public static StorageNode? Translate(IStorageNode node)
         {
             var translator = new NodeTranslator();
             translator.Visit(node);
             return translator._result;
         }
 
-        public override void VisitFileNode(DhrMaes.Storage.Core.Structure.Nodes.FileNode node)
+        public override void VisitFileNode(Core.Structure.File.FileNode node)
         {
             _result = new StorageNode
             {
