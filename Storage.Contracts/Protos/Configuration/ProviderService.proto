@@ -8,9 +8,19 @@ option csharp_namespace = "DhrMaes.Storage.Protobuf.Configuration.Providers.v1";
 
 service ProviderService {
     rpc AddProvider (AddProviderRequest) returns (AddProviderResponse);
+    rpc AuthenticateProvider(AuthenticateProviderRequest) returns (AuthenticateProviderResponse);
     rpc RemoveProvider (RemoveProviderRequest) returns (RemoveProviderResponse);
     rpc ListProviders (ListProvidersRequest) returns (ListProvidersResponse);
-    rpc GetInstalledProviders(GetInstalledProvidersRequest) returns (GetInstalledProvidersResponse);
+    rpc GetPlugins(GetPluginsRequest) returns (GetPluginsResponse);
+}
+
+message AddProviderRequest {
+    ProviderConfig provider = 1;
+}
+
+message AddProviderResponse {
+    string identifier = 1;
+    bool needs_authentication = 2;
 }
 
 message AddProviderRequest {
@@ -35,9 +45,9 @@ message RemoveProviderRequest {
 message RemoveProviderResponse {
 }
 
-message GetInstalledProvidersRequest {
+message GetPluginsRequest {
 }
 
-message GetInstalledProvidersResponse {
-    repeated ProviderConfig providers = 1;
+message GetPluginsResponse {
+    repeated ProviderConfig plugins = 1;
 }

@@ -1,5 +1,6 @@
 ﻿namespace DhrMaes.Storage.Provider.FileSystem
 {
+	using System.ComponentModel;
 	using System.IO;
 	using System.Text.Json;
 
@@ -16,6 +17,7 @@
         [StorageExclude]
         public string Identifier { get; private set; } = String.Empty;
 
+		[Description("Sets the path to the directory to be used for the FileStorageProvider.")]
         public string Path { get; set; }
 
 		public Task InitializeConfigAsync(string identifier)

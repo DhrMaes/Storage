@@ -6,11 +6,12 @@
     using System.Threading.Tasks;
 
     using DhrMaes.Storage.Core.Providers;
-	using DhrMaes.Storage.Core.Structure;
-	using DhrMaes.Storage.Core.Structure.File;
-	using DhrMaes.Storage.Core.Structure.Nodes;
+    using DhrMaes.Storage.Core.Structure;
+    using DhrMaes.Storage.Core.Structure.File;
+    using DhrMaes.Storage.Core.Structure.Directory;
+	using DhrMaes.Storage.Core.FileSystem;
 
-    [ProviderIdentifier("FileSystem")]
+	[ProviderIdentifier("FileSystem")]
     public class FileSystemProvider : IStorageProvider
     {
         private readonly string _path;
@@ -18,31 +19,31 @@
         public FileSystemProvider(string identifier, string path)
         {
             Identifier = identifier;
-            _path = path;
+            _path = path.TrimEnd(Path.DirectorySeparatorChar);
         }
 
-        public string Identifier { get; } = String.Empty;
+        public string Identifier { get; }
 
-        public Task<bool> ExistsAsync(IStorageNode node, CancellationToken cancellationToken = default)
+        public Task<bool> ExistsAsync(IBaseNode node, CancellationToken cancellationToken = default)
         {
-            if (node is FileNode)
+            if (node is IFileNodeReference)
             {
-                var fullPath = Path.Combine(_path, node.GetFullPath());
+                var fullPath = ToProviderPath(node);
                 return Task.FromResult(File.Exists(fullPath));
             }
 
-            if (node is DirectoryNode)
+            if (node is IDirectoryNodeReference)
             {
-                var fullPath = Path.Combine(_path, node.GetFullPath());
+                var fullPath = ToProviderPath(node);
                 return Task.FromResult(Directory.Exists(fullPath));
             }
 
             return Task.FromResult(false);
         }
 
-        public Task<Stream> OpenReadAsync(FileNode node, CancellationToken cancellationToken = default)
+        public Task<Stream> OpenReadAsync(IFileNodeReference node, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(_path, node.GetFullPath());
+            var fullPath = ToProviderPath(node);
             if (!File.Exists(fullPath))
             {
                 throw new FileNotFoundException("File not found.", fullPath);
@@ -60,9 +61,9 @@
             return Task.FromResult<Stream>(stream);
         }
 
-        public Task<Stream> OpenWriteAsync(FileNode node, CancellationToken cancellationToken = default)
+        public Task<Stream> OpenWriteAsync(IFileNodeReference node, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(_path, node.GetFullPath());
+            var fullPath = ToProviderPath(node);
             var directory = Path.GetDirectoryName(fullPath);
             if (!Directory.Exists(directory))
             {
@@ -81,10 +82,10 @@
             return Task.FromResult<Stream>(stream);
         }
 
-        public Task DeleteAsync(IStorageNode node, CancellationToken cancellationToken = default)
+        public Task DeleteAsync(IBaseNode node, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(_path, node.GetFullPath());
-            if (node is FileNode)
+            var fullPath = ToProviderPath(node);
+            if (node is IFileNodeReference)
             {
                 if (!File.Exists(fullPath))
                 {
@@ -95,7 +96,7 @@
                 return Task.CompletedTask;
             }
 
-            if (node is DirectoryNode)
+            if (node is IDirectoryNodeReference)
             {
                 if (!Directory.Exists(fullPath))
                 {
@@ -109,37 +110,43 @@
             return Task.CompletedTask;
         }
 
-        public Task<ICollection<IStorageNode>> ListAsync(DirectoryNode node, CancellationToken cancellationToken = default)
+        public Task<ICollection<IBaseNode>> ListAsync(IDirectoryNodeReference node, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(_path, node.GetFullPath());
+            var fullPath = ToProviderPath(node);
             if (!Directory.Exists(fullPath))
             {
-                return Task.FromResult((ICollection<IStorageNode>)new List<IStorageNode>());
+                return Task.FromResult((ICollection<IBaseNode>)new List<IBaseNode>());
             }
 
-            var items = new List<IStorageNode>();
+            var items = new List<IBaseNode>();
             items.AddRange(Directory
                 .GetDirectories(fullPath)
-                .Select(d => new DirectoryNode(Path.GetFileNameWithoutExtension(d))
-                {
-                    Parent = node,
-                }));
+                .Select(d => (IBaseNode)DirectoryNodeReference.FromPath(ToCorePath(d))));
 
             items.AddRange(Directory
                 .GetFiles(fullPath)
-                .Select(f => new FileInfo(f))
-                .Select(f => new FileNode(f.Name)
-                {
-                    Size = f.Length,
-                    Parent = node,
-                }));
+                .Select(f => (IBaseNode)FileNodeReference.FromPath(ToCorePath(f))));
 
-            return Task.FromResult((ICollection<IStorageNode>)items);
+            return Task.FromResult((ICollection<IBaseNode>)items);
+        }
+        
+        public Task<IFileNode> GetFileAsync(IFileNodeReference node, CancellationToken cancellationToken = default)
+        {
+            var fullPath = ToProviderPath(node);
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException("File not found.", fullPath);
+            }
+
+            var fileInfo = new FileInfo(fullPath);
+            var fileNode = new FileNode(this, new FileSize(fileInfo.Length), node);
+
+            return Task.FromResult<IFileNode>(fileNode);
         }
 
-        public Task CreateDirectoryAsync(DirectoryNode node, CancellationToken cancellationToken = default)
+        public Task CreateDirectoryAsync(IDirectoryNodeReference node, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(_path, node.GetFullPath());
+            var fullPath = ToProviderPath(node);
             if (Directory.Exists(fullPath))
             {
                 return Task.CompletedTask;
@@ -149,12 +156,47 @@
             return Task.CompletedTask;
         }
 
-        public Task CopyAsync(IStorageNode source, IStorageNode destination, CancellationToken cancellationToken = default)
+        public Task CopyAsync(IDirectoryNodeReference source, IDirectoryNodeReference destination, CancellationToken cancellationToken = default)
         {
-            if (source is FileNode && destination is FileNode)
+            var sourcePath = ToProviderPath(source);
+            var destinationPath = ToProviderPath(destination);
+            if (!Directory.Exists(sourcePath))
             {
-                var sourcePath = Path.Combine(_path, source.GetFullPath());
-                var destinationPath = Path.Combine(_path, destination.GetFullPath());
+                throw new DirectoryNotFoundException($"Source directory not found: {sourcePath}");
+            }
+
+            // Create all of the directories
+            foreach (var dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                var newDirPath = dirPath.Replace(sourcePath, destinationPath);
+                if (!Directory.Exists(newDirPath))
+                {
+                    Directory.CreateDirectory(newDirPath);
+                }
+            }
+
+            // Copy all the files & replace any files with the same name
+            foreach (var newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                var newFilePath = newPath.Replace(sourcePath, destinationPath);
+                var newFileDir = Path.GetDirectoryName(newFilePath);
+                if (!Directory.Exists(newFileDir))
+                {
+                    Directory.CreateDirectory(newFileDir!);
+                }
+
+                File.Copy(newPath, newFilePath, true);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task CopyAsync(IFileNodeReference source, IBaseNode destination, CancellationToken cancellationToken = default)
+        {
+            if (destination is IFileNodeReference)
+            {
+                var sourcePath = ToProviderPath(source);
+                var destinationPath = ToProviderPath(destination);;
                 if (!File.Exists(sourcePath))
                 {
                     throw new FileNotFoundException("Source file not found.", sourcePath);
@@ -170,10 +212,10 @@
                 return Task.CompletedTask;
             }
 
-            if (source is FileNode fn && destination is DirectoryNode)
+            if (destination is IDirectoryNodeReference)
             {
-                var sourcePath = Path.Combine(_path, source.GetFullPath());
-                var destinationPath = Path.Combine(_path, destination.GetFullPath(), fn.Name);
+                var sourcePath = ToProviderPath(source);
+                var destinationPath = Path.Combine(ToProviderPath(destination), source.Name);
                 if (!File.Exists(sourcePath))
                 {
                     throw new FileNotFoundException("Source file not found.", sourcePath);
@@ -186,52 +228,61 @@
                 }
 
                 File.Copy(sourcePath, destinationPath, true);
-                return Task.CompletedTask;
-            }
-
-            if (source is DirectoryNode && destination is DirectoryNode)
-            {
-                var sourcePath = Path.Combine(_path, source.GetFullPath());
-                var destinationPath = Path.Combine(_path, destination.GetFullPath());
-                if (!Directory.Exists(sourcePath))
-                {
-                    throw new DirectoryNotFoundException($"Source directory not found: {sourcePath}");
-                }
-
-                // Create all of the directories
-                foreach (var dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-                {
-                    var newDirPath = dirPath.Replace(sourcePath, destinationPath);
-                    if (!Directory.Exists(newDirPath))
-                    {
-                        Directory.CreateDirectory(newDirPath);
-                    }
-                }
-
-                // Copy all the files & replace any files with the same name
-                foreach (var newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-                {
-                    var newFilePath = newPath.Replace(sourcePath, destinationPath);
-                    var newFileDir = Path.GetDirectoryName(newFilePath);
-                    if (!Directory.Exists(newFileDir))
-                    {
-                        Directory.CreateDirectory(newFileDir!);
-                    }
-
-                    File.Copy(newPath, newFilePath, true);
-                }
                 return Task.CompletedTask;
             }
 
             throw new NotSupportedException("Copying between the specified node types is not supported.");
         }
 
-        public Task MoveAsync(IStorageNode source, IStorageNode destination, CancellationToken cancellationToken = default)
+        public Task MoveAsync(IDirectoryNodeReference source, IDirectoryNodeReference destination, CancellationToken cancellationToken = default)
         {
-            if (source is FileNode && destination is FileNode)
+            var sourcePath = ToProviderPath(source);
+            var destinationPath = ToProviderPath(destination);
+            if (!Directory.Exists(sourcePath))
             {
-                var sourcePath = Path.Combine(_path, source.GetFullPath());
-                var destinationPath = Path.Combine(_path, destination.GetFullPath());
+                throw new DirectoryNotFoundException($"Source directory not found: {sourcePath}");
+            }
+
+            // Ensure destination directory exists
+            if (!Directory.Exists(destinationPath))
+            {
+                Directory.CreateDirectory(destinationPath);
+            }
+
+            // Move all directories
+            foreach (var dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                var newDirPath = dirPath.Replace(sourcePath, destinationPath);
+                if (!Directory.Exists(newDirPath))
+                {
+                    Directory.CreateDirectory(newDirPath);
+                }
+            }
+
+            // Move all files
+            foreach (var filePath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                var newFilePath = filePath.Replace(sourcePath, destinationPath);
+                var newFileDir = Path.GetDirectoryName(newFilePath);
+                if (!Directory.Exists(newFileDir))
+                {
+                    Directory.CreateDirectory(newFileDir!);
+                }
+
+                File.Move(filePath, newFilePath, true);
+            }
+
+            // Delete the source directory after moving
+            Directory.Delete(sourcePath, true);
+            return Task.CompletedTask;
+        }
+
+        public Task MoveAsync(IFileNodeReference source, IBaseNode destination, CancellationToken cancellationToken = default)
+        {
+            if (destination is IFileNodeReference)
+            {
+                var sourcePath = ToProviderPath(source);
+                var destinationPath = ToProviderPath(destination);
                 if (!File.Exists(sourcePath))
                 {
                     throw new FileNotFoundException("Source file not found.", sourcePath);
@@ -247,10 +298,10 @@
                 return Task.CompletedTask;
             }
 
-            if (source is FileNode fn && destination is DirectoryNode)
+            if (destination is IDirectoryNodeReference)
             {
-                var sourcePath = Path.Combine(_path, source.GetFullPath());
-                var destinationPath = Path.Combine(_path, destination.GetFullPath(), fn.Name);
+                var sourcePath = ToProviderPath(source);
+                var destinationPath = Path.Combine(ToProviderPath(destination), source.Name);
                 if (!File.Exists(sourcePath))
                 {
                     throw new FileNotFoundException("Source file not found.", sourcePath);
@@ -263,53 +314,20 @@
                 }
 
                 File.Move(sourcePath, destinationPath, true);
-                return Task.CompletedTask;
-            }
-
-            if (source is DirectoryNode && destination is DirectoryNode)
-            {
-                var sourcePath = Path.Combine(_path, source.GetFullPath());
-                var destinationPath = Path.Combine(_path, destination.GetFullPath());
-                if (!Directory.Exists(sourcePath))
-                {
-                    throw new DirectoryNotFoundException($"Source directory not found: {sourcePath}");
-                }
-
-                // Ensure destination directory exists
-                if (!Directory.Exists(destinationPath))
-                {
-                    Directory.CreateDirectory(destinationPath);
-                }
-
-                // Move all directories
-                foreach (var dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-                {
-                    var newDirPath = dirPath.Replace(sourcePath, destinationPath);
-                    if (!Directory.Exists(newDirPath))
-                    {
-                        Directory.CreateDirectory(newDirPath);
-                    }
-                }
-
-                // Move all files
-                foreach (var filePath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-                {
-                    var newFilePath = filePath.Replace(sourcePath, destinationPath);
-                    var newFileDir = Path.GetDirectoryName(newFilePath);
-                    if (!Directory.Exists(newFileDir))
-                    {
-                        Directory.CreateDirectory(newFileDir!);
-                    }
-
-                    File.Move(filePath, newFilePath, true);
-                }
-
-                // Delete the source directory after moving
-                Directory.Delete(sourcePath, true);
                 return Task.CompletedTask;
             }
 
             throw new NotSupportedException("Moving between the specified node types is not supported.");
+        }
+
+        private string ToProviderPath(IBaseNode node)
+        {
+            return Path.Combine(_path, node.GetFullPath().TrimStart(Path.DirectorySeparatorChar));
+        }
+
+        private string ToCorePath(string providerPath)
+        {
+            return providerPath.Substring(_path.Length);
         }
     }
 }

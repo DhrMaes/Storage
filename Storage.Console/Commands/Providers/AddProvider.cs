@@ -24,8 +24,8 @@
 
         private static IEnumerable<Command> LoadProviderCommands(ProviderService.ProviderServiceClient client)
         {
-            var response = client.GetInstalledProviders(new GetInstalledProvidersRequest());
-            foreach (var provider in response.Providers)
+            var response = client.GetPlugins(new GetPluginsRequest());
+            foreach (var provider in response.Plugins)
             {
                 var command = new Command(provider.Name, $"Add a new {provider.Name} provider");
                 var options = new Dictionary<ProviderConfigProperty, Option>();
@@ -33,7 +33,7 @@
                 foreach (var property in provider.Properties)
                 {
                     var optionType = typeof(Option<>).MakeGenericType(GetPropertyType(property));
-                    var option = (Option)Activator.CreateInstance(optionType, $"--{property.Name.ToLower()}", $"Sets {property.Name}")!;
+                    var option = (Option)Activator.CreateInstance(optionType, $"--{property.Name.ToLower()}", property.Description)!;
                     options[property] = option;
                     command.AddOption(option);
                 }

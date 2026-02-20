@@ -5,139 +5,94 @@
     using System.Threading.Tasks;
 
     using DhrMaes.Storage.Core;
-    using DhrMaes.Storage.Core.Providers;
+	using DhrMaes.Storage.Core.Plugins;
+	using DhrMaes.Storage.Core.Providers;
     using DhrMaes.Storage.Protobuf.Configuration.Providers.v1;
 
     using Grpc.Core;
 
     public class ProviderService : DhrMaes.Storage.Protobuf.Configuration.Providers.v1.ProviderService.ProviderServiceBase
     {
-        private readonly IDmc _dmc;
+        private readonly IStorage _storage;
         private readonly ILogger<ProviderService> _logger;
 
         public ProviderService(
-            IDmc dmc,
+            IStorage storage,
             ILogger<ProviderService> logger)
         {
-            _dmc = dmc ?? throw new ArgumentNullException(nameof(dmc));
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public override async Task<AddProviderResponse> AddProvider(AddProviderRequest request, ServerCallContext context)
+        public async override Task<GetPluginsResponse> GetPlugins(GetPluginsRequest request, ServerCallContext context)
         {
-            var providerTypes = await _dmc.GetInstalledProviders();
-            if (!providerTypes.TryGetValue(request.Provider.Name, out var providerType))
-            {
-                throw new RpcException(new Status(StatusCode.NotFound, $"Provider '{request.Provider.Name}' not found."));
-            }
+            var plugins = _storage.GetPlugins();
+            var response = new GetPluginsResponse();
 
-            var config = Activator.CreateInstance(providerType)! as IStorageProviderConfig;
-            if (config is null)
+            ProviderConfigProperty Translate(PluginProperty property)
             {
-                throw new RpcException(new Status(StatusCode.Internal, $"Provider '{request.Provider.Name}' does not implement IStorageProviderConfig."));
-            }
-
-            foreach (var property in request.Provider.Properties)
-            {
-                var propInfo = providerType.GetProperty(property.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-                if (propInfo is null ||
-                    propInfo.GetCustomAttribute<StorageExcludeAttribute>() is not null)
+                return new ProviderConfigProperty
                 {
-                    _logger.LogWarning("Property '{Property}' not found on provider '{Provider}'", property.Name, request.Provider.Name);
-                    continue;
-                }
-                try
-                {
-                    object? value = property.GetValue();
-                    if (value is not null)
+                    Name = property.Name,
+                    Description = property.Description,
+                    Type = property.PropertyType switch
                     {
-                        propInfo.SetValue(config, value);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error setting property '{Property}' on provider '{Provider}'", property.Name, request.Provider.Name);
-                }
+                        PluginProperty.Type.String => ProviderConfigPropertyType.String,
+                        PluginProperty.Type.Integer => ProviderConfigPropertyType.Int,
+                        PluginProperty.Type.Boolean => ProviderConfigPropertyType.Bool,
+                        PluginProperty.Type.Double => ProviderConfigPropertyType.Double,
+                        _ => ProviderConfigPropertyType.Unspecified,
+                    },
+                };
             }
 
-            var provider = await _dmc.AddProvider(config);
-            return new AddProviderResponse
+            foreach (var plugin in plugins)
             {
-                Identifier = provider.Identifier,
-            };
-        }
-
-        public override async Task<RemoveProviderResponse> RemoveProvider(RemoveProviderRequest request, ServerCallContext context)
-        {
-            try
-            {
-                await _dmc.RemoveProvider(request.Identifier);
-                return new RemoveProviderResponse();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error removing provider '{Provider}'", request.Identifier);
-                throw new RpcException(new Status(StatusCode.Internal, $"Error removing provider '{request.Identifier}': {ex.Message}"));
-            }
-        }
-
-		public override async Task<ListProvidersResponse> ListProviders(ListProvidersRequest request, ServerCallContext context)
-        {
-            var providers = await _dmc.ListProviders();
-            return new ListProvidersResponse
-            {
-                Providers =
+                response.Plugins.Add(new ProviderConfig
                 {
-                    providers.Select(p => new Provider
-                    {
-                        Identifier = p.Identifier,
-                        Type = p.GetType().Name,
-                    }),
-                },
-            };
-        }
-
-        public override async Task<GetInstalledProvidersResponse> GetInstalledProviders(GetInstalledProvidersRequest request, ServerCallContext context)
-        {
-            var providerConfigs = await _dmc.GetInstalledProviders();
-            var configs = new List<ProviderConfig>();
-            foreach (var config in providerConfigs)
-            {
-                var properties = new List<ProviderConfigProperty>();
-                foreach (var prop in config.Value.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-                {
-                    if (prop is null ||
-                        prop.GetCustomAttribute<StorageExcludeAttribute>() is not null)
-                    {
-                        continue;
-                    }
-
-                    properties.Add(new ProviderConfigProperty
-                    {
-                        Name = prop.Name,
-                        Type = ProviderConfigProperty.GetPropertyType(prop.PropertyType),
-                    });
-                }
-
-                configs.Add(new ProviderConfig
-                {
-                    Name = config.Key,
+                    Name = plugin.Name,
                     Properties =
                     {
-                        properties,
-                    },
+                        plugin.Properties.Values.Select(Translate),
+                    }
                 });
             }
 
-            var response = new GetInstalledProvidersResponse
-            {
-                Providers =
-                {
-                    configs,
-                },
-            };
-
             return response;
         }
+
+		public async override Task<AddProviderResponse> AddProvider(AddProviderRequest request, ServerCallContext context)
+        {
+            var plugin = default(IStoragePlugin);
+
+            try
+            {
+                plugin = _storage.GetPlugin(request.Provider.Name);
+            }
+            catch(Exception)
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, $"No plugin found with name '{request.Provider.Name}'."));
+            }
+
+            var properties = new Dictionary<PluginProperty, object>();
+            foreach(var property in request.Provider.Properties)
+            {
+                var pluginProperty = plugin.Properties.Values.FirstOrDefault(p => p.Name == property.Name);
+                if(String.IsNullOrEmpty(pluginProperty.Name))
+                {
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"Plugin '{plugin.Name}' does not have a property named '{property.Name}'."));
+                }
+
+                properties.Add(pluginProperty, property.GetValue());
+            }
+
+            var identifier = Guid.CreateVersion7().ToString();
+			var config = await plugin.CreateConfigFromProperties(identifier.ToString(), properties);
+            await _storage.AddProviderAsync(config);
+            return new AddProviderResponse
+            {
+                Identifier = identifier,
+            };
+		}
     }
 }

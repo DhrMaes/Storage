@@ -1,13 +1,14 @@
 <Project>
   <!-- Custom publish step -->
   <Target Name="CopyToAppData"
-          AfterTargets="Publish"
-          Condition="'$(MSBuildProjectName)' != '' and $(MSBuildProjectName.StartsWith('Storage.Provider.'))">
+          AfterTargets="Publish">
 
     <PropertyGroup>
       <PluginName>$([System.Text.RegularExpressions.Regex]::Replace('$(MSBuildProjectName)', '^Storage\.Provider\.', ''))</PluginName>
       <AppDataPath>$(APPDATA)\DhrMaes\Storage\Plugins\$(PluginName)</AppDataPath>
     </PropertyGroup>
+
+	<Message Text="CopyToAppData: Copying plugin '$(PluginName)' to '$(AppDataPath)'" Importance="High" />
 
     <MakeDir Directories="$(AppDataPath)" />
 
@@ -16,6 +17,8 @@
       <FilesToCopy Include="$(PublishDir)\**\*.*"
                    Exclude="$(PublishDir)\Storage.Core.dll;$(PublishDir)\Storage.Core.pdb" />
     </ItemGroup>
+
+	<Message Text="@(FilesToCopy)" Importance="high" />
 
     <Copy SourceFiles="@(FilesToCopy)"
           DestinationFolder="$(AppDataPath)"

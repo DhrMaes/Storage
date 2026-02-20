@@ -16,10 +16,19 @@
 			command.AddArgument(PathArg);
 			command.SetHandler(async (path) =>
 			{
-				await client.RemoveDirectoryAsync(new Protobuf.FileSystem.Directory.v1.RemoveDirectoryRequest
+				try
 				{
-					Path = path,
-                });
+                    await client.RemoveDirectoryAsync(new Protobuf.FileSystem.Directory.v1.RemoveDirectoryRequest
+                    {
+                        Path = path,
+                    });
+
+                    System.Console.WriteLine($"Directory '{path}' removed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    System.Console.WriteLine($"Error removing directory '{path}': {ex.Message}");
+                }
             }, PathArg);
             return command;
 		}

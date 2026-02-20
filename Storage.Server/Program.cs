@@ -1,6 +1,7 @@
 namespace DhrMaes.Storage.Server
 {
 	using DhrMaes.Storage.Core;
+	using DhrMaes.Storage.Core.Plugins;
 	using DhrMaes.Storage.Server.Services;
 
 	public class Program
@@ -20,7 +21,9 @@ namespace DhrMaes.Storage.Server
 
             // Add services to the container.
             builder.Services.AddGrpc();
-			builder.Services.AddSingleton<IDmc>(new Dmc());
+			builder.Services.AddSingleton<PluginLoader>();
+			builder.Services.AddSingleton<Core.Services.IProviderService, Core.Services.ProviderService>();
+			builder.Services.AddSingleton<IStorage, Storage>();
 
 			var app = builder.Build();
 

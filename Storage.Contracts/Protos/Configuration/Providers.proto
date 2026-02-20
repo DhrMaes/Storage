@@ -16,20 +16,20 @@ message ProviderConfig {
 
 message ProviderConfigProperty {
   string name = 1;
-  ProviderConfigPropertyType type = 2;
+  string description = 2;
+  ProviderConfigPropertyType type = 3;
   oneof value {
-    string string_value = 3;
-    int32 int_value = 4;
-    bool bool_value = 5;
-    double double_value = 6;
-    string enum_value = 7;
+    string string_value = 4;
+    int32 int_value = 5;
+    bool bool_value = 6;
+    double double_value = 7;
   }
 }
 
 enum ProviderConfigPropertyType {
-  PROPERTY_TYPE_UNSPECIFIED = 0;
-  STRING = 1;
-  INT = 2;
-  BOOL = 3;
-  DOUBLE = 4;
+    PROVIDERCONFIGPROPERTYTYPE_UNSPECIFIED = 0;
+    PROVIDERCONFIGPROPERTYTYPE_STRING = 1;
+    PROVIDERCONFIGPROPERTYTYPE_INT = 2;
+    PROVIDERCONFIGPROPERTYTYPE_BOOL = 3;
+    PROVIDERCONFIGPROPERTYTYPE_DOUBLE = 4;
 }

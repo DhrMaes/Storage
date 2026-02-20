@@ -16,10 +16,19 @@
             command.AddArgument(PathArg);
             command.SetHandler(async (path) =>
             {
-                await client.RemoveDirectoryAsync(new Protobuf.FileSystem.Directory.v1.RemoveDirectoryRequest
+                try
                 {
-                    Path = path,
-                });
+                    await client.MakeDirectoryAsync(new Protobuf.FileSystem.Directory.v1.MakeDirectoryRequest
+                    {
+                        Path = path,
+                    });
+
+                    System.Console.WriteLine($"Directory created: {path}");
+                }
+                catch
+                {
+                    System.Console.WriteLine($"Failed to create directory: {path}");
+                }
             }, PathArg);
             return command;
         }

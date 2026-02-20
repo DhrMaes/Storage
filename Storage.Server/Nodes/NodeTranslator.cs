@@ -1,8 +1,7 @@
 ﻿namespace DhrMaes.Storage.Server.Nodes
 {
-	using DhrMaes.Storage.Core.Structure;
-	using DhrMaes.Storage.Core.Structure.File;
-	using DhrMaes.Storage.Protobuf.Structure.v1;
+    using DhrMaes.Storage.Core.Structure;
+    using DhrMaes.Storage.Protobuf.Structure.v1;
 
     public class NodeTranslator : DhrMaes.Storage.Core.Structure.NodeWalker
     {
@@ -13,11 +12,22 @@
             _result = null;
         }
 
-        public static StorageNode? Translate(IStorageNode node)
+        public static StorageNode? Translate(IBaseNode node)
         {
             var translator = new NodeTranslator();
             translator.Visit(node);
             return translator._result;
+        }
+
+		public override void VisitFileNodeReference(Core.Structure.File.FileNodeReference node)
+        {
+            _result = new StorageNode
+            {
+                File = new FileNode
+                {
+                    Name = node.Name,
+                },
+            };
         }
 
         public override void VisitFileNode(Core.Structure.File.FileNode node)
@@ -32,7 +42,18 @@
             };
         }
 
-        public override void VisitDirectoryNode(DhrMaes.Storage.Core.Structure.Nodes.DirectoryNode node)
+        public override void VisitDirectoryNodeReference(Core.Structure.Directory.DirectoryNodeReference node)
+        {
+            _result = new StorageNode
+            {
+                Directory = new DirectoryNode
+                {
+                    Name = node.Name,
+                },
+            };
+        }
+
+        public override void VisitDirectoryNode(DhrMaes.Storage.Core.Structure.Directory.DirectoryNode node)
         {
             _result = new StorageNode
             {
@@ -41,7 +62,11 @@
                     Name = node.Name,
                     Children =
                     {
-                        node.Children
+                        node.Directories
+                            .Select(child => Translate(child))
+                            .Where(child => child is not null)
+                            .ToList()!,
+                        node.Files
                             .Select(child => Translate(child))
                             .Where(child => child is not null)
                             .ToList()!,

@@ -49,6 +49,12 @@
             //args = new[]
             //{
             //    "fs",
+            //    "download", @"/warriorkeppi.png", @"C:\Users\ArneMA\Downloads\",
+            //};
+
+            //args = new[]
+            //{
+            //    "fs",
             //    "rm", "/Documents/Bellewaerde Maes Arne.pdf",
             //};
 

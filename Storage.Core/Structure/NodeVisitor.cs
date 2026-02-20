@@ -9,11 +9,11 @@
 		void VisitFileNodeReference(FileNodeReference node);
 		void VisitDirectoryNode(DirectoryNode node);
 		void VisitDirectoryNodeReference(DirectoryNodeReference node);
-	}
+    }
 
 	public class NodeVisitor : INodeVisitor
 	{
-		public virtual void Visit(IStorageNode? node)
+		public virtual void Visit(IBaseNode? node)
 		{
 			if (node is null)
 			{
@@ -23,7 +23,7 @@
 			node.Accept(this);
 		}
 
-		public virtual void VisitDefault(IStorageNode node)
+		public virtual void VisitDefault(IBaseNode node)
 		{
 		}
 

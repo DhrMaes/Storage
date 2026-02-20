@@ -2,145 +2,193 @@
 {
     using System.Threading.Tasks;
 
-    using DhrMaes.Storage.Protobuf.FileSystem.Directory.v1;
-
     using DhrMaes.Storage.Core;
-    using DhrMaes.Storage.Core.Structure.Nodes;
+    using DhrMaes.Storage.Core.Providers;
+    using DhrMaes.Storage.Core.Structure.Directory;
+    using DhrMaes.Storage.Core.Structure.File;
+    using DhrMaes.Storage.Protobuf.FileSystem.Directory.v1;
+    using DhrMaes.Storage.Protobuf.FileSystem.File.v1;
+    using DhrMaes.Storage.Protobuf.Structure.v1;
+    using DhrMaes.Storage.Server.Nodes;
+
+    using Google.Protobuf.Collections;
 
     using Grpc.Core;
 
-    using DhrMaes.Storage.Server.Nodes;
-    using DhrMaes.Storage.Protobuf.FileSystem.File.v1;
-	using DhrMaes.Storage.Core.Structure;
-	using DhrMaes.Storage.Core.Structure.File;
-
-	public class StorageService : DhrMaes.Storage.Protobuf.FileSystem.v1.StorageService.StorageServiceBase
+    public class StorageService : DhrMaes.Storage.Protobuf.FileSystem.v1.StorageService.StorageServiceBase
     {
-        private readonly IDmc _dmc;
+        private static readonly Random _random = new();
+
+        private readonly IStorage _storage;
         private readonly ILogger<StorageService> _logger;
 
         public StorageService(
-            IDmc dmc,
+            IStorage storage,
             ILogger<StorageService> logger)
         {
-            _dmc = dmc ?? throw new ArgumentNullException(nameof(dmc));
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        public async override Task<DirectoryExistsResponse> DirectoryExists(DirectoryExistsRequest request, ServerCallContext context)
+        {
+            var exists = await _storage.DirectoryExistsAsync(request.Path);
+            return new DirectoryExistsResponse
+            {
+                Exists = exists,
+            };
         }
 
         public async override Task<ListDirectoryResponse> ListDirectory(ListDirectoryRequest request, ServerCallContext context)
         {
-            var directory = DirectoryNode.FromPath(request.Path);
-            var nodes = await _dmc.ListDirectory(directory) ?? new List<IStorageNode>();
+            var node = await _storage.GetDirectoryAsync(request.Path);
+            var translated = NodeTranslator.Translate(node);
             return new ListDirectoryResponse
             {
                 Nodes =
                 {
-                    nodes.Select(NodeTranslator.Translate),
-                }
+                    translated?.Directory.Children ?? new RepeatedField<StorageNode>(),
+                },
             };
         }
 
-		public override Task<MakeDirectoryResponse> MakeDirectory(MakeDirectoryRequest request, ServerCallContext context)
+        public override async Task<MakeDirectoryResponse> MakeDirectory(MakeDirectoryRequest request, ServerCallContext context)
         {
-            var directory = DirectoryNode.FromPath(request.Path);
-            _dmc.
+            var dirReference = DirectoryNodeReference.FromPath(request.Path);
+            if (dirReference.Parent is null)
+            {
+                var rootDirectory = await _storage.GetDirectoryAsync();
+                await rootDirectory.CreateDirectoryAsync(dirReference.Name);
+                return new MakeDirectoryResponse();
+            }
+
+            var toBeCreated = new Stack<IDirectoryNodeReference>([(IDirectoryNodeReference)dirReference]);
+            var parentDirReference = dirReference.Parent ?? DirectoryNodeReference.Root;
+            while (!await _storage.DirectoryExistsAsync(parentDirReference.GetFullPath()))
+            {
+                toBeCreated.Push(parentDirReference);
+                parentDirReference = parentDirReference.Parent ?? DirectoryNodeReference.Root;
+            }
+
+            foreach (var toCreate in toBeCreated)
+            {
+                IDirectoryNode parentNode;
+                if (toCreate.Parent is null)
+                {
+                    parentNode = await _storage.GetDirectoryAsync();
+                }
+                else
+                {
+                    parentNode = await _storage.GetDirectoryAsync(toCreate.Parent.GetFullPath());
+                }
+
+                await parentNode.CreateDirectoryAsync(toCreate.Name);
+            }
+
+            return new MakeDirectoryResponse();
         }
 
-        public override async Task<Protobuf.FileSystem.File.v1.OpenWriteResponse> OpenWrite(IAsyncStreamReader<Protobuf.FileSystem.File.v1.OpenWriteRequest> requestStream, ServerCallContext context)
+        public override async Task<RemoveDirectoryResponse> RemoveDirectory(RemoveDirectoryRequest request, ServerCallContext context)
         {
-            var fileName = string.Empty;
-            var expectedHash = string.Empty;
-            var expectedSize = 0L;
-            Stream? stream = null;
-
-            var totalBytes = 0l;
-            await foreach (var message in requestStream.ReadAllAsync())
-            {
-                if (message.PayloadCase == OpenWriteRequest.PayloadOneofCase.Info)
-                {
-                    fileName = message.Info.FileName;
-                    expectedSize = message.Info.FileSize;
-                    expectedHash = message.Info.Sha256;
-
-                    var node = FileNode.FromPath(fileName);
-                    stream = await _dmc.OpenWriteAsync(node);
-                }
-                else if (message.PayloadCase == OpenWriteRequest.PayloadOneofCase.Chunk)
-                {
-                    if (stream is null)
-                    {
-                        throw new RpcException(new Status(StatusCode.InvalidArgument, "Missing file info"));
-                    }
-
-                    await stream.WriteAsync(message.Chunk.Content.Memory);
-                    totalBytes += message.Chunk.Content.Length;
-                }
-            }
-
-            if (stream is null)
-            {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "No file info received"));
-            }
-
-            await stream.FlushAsync();
-            await stream.DisposeAsync();
-
-            if (totalBytes != expectedSize)
-            {
-                return new OpenWriteResponse
-                {
-                    Success = false,
-                    Message = $"File size mismatch. Expected {expectedSize} bytes, but received {totalBytes} bytes."
-                };
-            }
-
-            if (String.IsNullOrEmpty(expectedHash))
-            {
-                // TODO: check the sha256 has
-            }
-
-            return new OpenWriteResponse
-            {
-                Success = true,
-                Message = "File uploaded successfully.",
-            };
+            var dirReference = DirectoryNodeReference.FromPath(request.Path);
+            var directory = await _storage.GetDirectoryAsync(dirReference.GetFullPath());
+            await directory.RemoveAsync();
+            return new RemoveDirectoryResponse();
         }
 
-        public override async Task OpenRead(OpenReadRequest request, IServerStreamWriter<OpenReadResponse> responseStream, ServerCallContext context)
+        public async override Task OpenRead(OpenReadRequest request, IServerStreamWriter<OpenReadResponse> responseStream, ServerCallContext context)
         {
-            var filePath = FileNode.FromPath(request.FileName);
-            if (!await _dmc.ExistsAsync(filePath))
-            {
-                throw new RpcException(new Status(StatusCode.NotFound, $"File '{request.FileName}' not found."));
-            }
+            var fileRef = FileNodeReference.FromPath(request.FileName);
+            var file = await _storage.GetFileAsync(fileRef.GetFullPath());
+            using var stream = await file.OpenReadAsync(context.CancellationToken);
 
+            // Write the initial info message
             await responseStream.WriteAsync(new OpenReadResponse
             {
                 Info = new FileInfo
                 {
-                    FileName = request.FileName,
-                    FileSize = 0, // TODO: get the actual file size
-                    Sha256 = string.Empty // TODO: get the actual sha256
-                }
+                    FileName = file.Name,
+                    FileSize = file.Size.Size,
+                },
             });
 
-            var buffer = new byte[64 * 1024];
+            // Read the stream and write chunks
+            const int chunkSize = 64 * 1024;
+            var buffer = new byte[chunkSize];
             var offset = 0L;
-
-            var stream = await _dmc.OpenReadAsync(filePath);
             int bytesRead;
-            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            while ((bytesRead = await stream.ReadAsync(buffer, 0, chunkSize, context.CancellationToken)) > 0)
             {
                 await responseStream.WriteAsync(new OpenReadResponse
                 {
                     Chunk = new FileChunk
                     {
+                        Content = Google.Protobuf.ByteString.CopyFrom(buffer, 0, bytesRead),
                         Offset = offset,
-                        Content = Google.Protobuf.ByteString.CopyFrom(buffer, 0, bytesRead)
-                    }
+                    },
                 });
 
                 offset += bytesRead;
+            }
+        }
+
+        public override async Task<OpenWriteResponse> OpenWrite(IAsyncStreamReader<OpenWriteRequest> requestStream, ServerCallContext context)
+        {
+            // Step 1: Read the first message (should contain FileInfo)
+            if (!await requestStream.MoveNext(context.CancellationToken))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "No initial message received."));
+            }
+
+            var firstMessage = requestStream.Current;
+            if (firstMessage.Info == null)
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "First message must contain file info."));
+            }
+
+            var fileRef = FileNodeReference.FromPath(firstMessage.Info.FileName);
+            var provider = default(IStorageProvider);
+            if (!String.IsNullOrEmpty(firstMessage.ProviderIdentifier) &&
+                _storage.ProviderExists(firstMessage.ProviderIdentifier))
+            {
+                provider = _storage.GetProvider(firstMessage.ProviderIdentifier);
+            }
+            else
+            {
+                var providers = _storage.GetProviders();
+                provider = providers[_random.Next(providers.Count)];
+            }
+
+            try
+            {
+                using var writeStream = await provider.OpenWriteAsync(fileRef, context.CancellationToken);
+
+                // Step 2: Write all subsequent chunks to the file
+                while (await requestStream.MoveNext(context.CancellationToken))
+                {
+                    var message = requestStream.Current;
+                    if (message.Chunk == null || message.Chunk.Content == null)
+                    {
+                        continue; // Ignore empty chunk messages
+                    }
+
+                    var buffer = message.Chunk.Content.ToByteArray();
+                    await writeStream.WriteAsync(buffer, 0, buffer.Length, context.CancellationToken);
+                }
+
+                await writeStream.FlushAsync(context.CancellationToken);
+
+                return new OpenWriteResponse
+                {
+                    Success = true,
+                    Message = "File written successfully.",
+                    SavedPath = fileRef.GetFullPath(),
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                throw new RpcException(new Status(StatusCode.Aborted, "Write has been aborted."));
             }
         }
     }

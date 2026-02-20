@@ -31,7 +31,7 @@
                     }
                     else if (node.NodeTypeCase == Protobuf.Structure.v1.StorageNode.NodeTypeOneofCase.File)
                     {
-                        System.Console.WriteLine($"[FILE] {node.File.Name} ({node.File.Size} bytes)");
+                        System.Console.WriteLine($"[FILE] {node.File.Name}");
                     }
                 }
 

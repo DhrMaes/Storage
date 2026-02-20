@@ -2,6 +2,7 @@
 
 package dhrmaes.storage.protobuf.filesystem.v1;
 
+import "Protos/FileSystem/Directory/directory_exists_v1.proto";
 import "Protos/FileSystem/Directory/list_directory_v1.proto";
 import "Protos/FileSystem/Directory/make_directory_v1.proto";
 import "Protos/FileSystem/Directory/remove_directory_v1.proto";
@@ -13,6 +14,7 @@ option csharp_namespace = "DhrMaes.Storage.Protobuf.FileSystem.v1";
 
 service StorageService {
   // Directories
+  rpc DirectoryExists (dhrmaes.storage.protobuf.filesystem.directory.v1.DirectoryExistsRequest) returns (dhrmaes.storage.protobuf.filesystem.directory.v1.DirectoryExistsResponse);
   rpc ListDirectory (dhrmaes.storage.protobuf.filesystem.directory.v1.ListDirectoryRequest) returns (dhrmaes.storage.protobuf.filesystem.directory.v1.ListDirectoryResponse);
   rpc MakeDirectory (dhrmaes.storage.protobuf.filesystem.directory.v1.MakeDirectoryRequest) returns (dhrmaes.storage.protobuf.filesystem.directory.v1.MakeDirectoryResponse);
   rpc RemoveDirectory (dhrmaes.storage.protobuf.filesystem.directory.v1.RemoveDirectoryRequest) returns (dhrmaes.storage.protobuf.filesystem.directory.v1.RemoveDirectoryResponse);

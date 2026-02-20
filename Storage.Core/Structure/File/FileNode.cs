@@ -1,34 +1,41 @@
 ﻿namespace DhrMaes.Storage.Core.Structure.File
 {
-	using System.Text.Json.Serialization;
-
-	using DhrMaes.Storage.Core.FileSystem;
+    using DhrMaes.Storage.Core.FileSystem;
+	using DhrMaes.Storage.Core.Providers;
 	using DhrMaes.Storage.Core.Structure;
-	using DhrMaes.Storage.Core.Structure.Directory;
-	using DhrMaes.Storage.Core.Structure.File;
+    using DhrMaes.Storage.Core.Structure.Directory;
 
-	public sealed class FileNode : IFileNode
+    public sealed class FileNode : IFileNode
     {
         private readonly IStorage _storage;
+        private readonly IStorageProvider _provider;
 
-        internal FileNode(IStorage storage, FileNodeReference reference)
+        public FileNode(
+            IStorageProvider provider,
+            FileSize size,
+            IFileNodeReference reference)
         {
-            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             Name = reference.Name;
+            Size = size;
             Parent = reference.Parent;
+
+            //_storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+            //Reload();
         }
 
         public string Name { get; set; }
 
-        [JsonIgnore]
         public FileSize Size { get; set; } = FileSize.Unknown;
 
-        [JsonIgnore]
-        public IDirectoryNode? Parent { get; set; }
+        public IDirectoryNodeReference? Parent { get; set; }
 
-        public FileNode ToFileNode(IStorage storage)
+        public Stream OpenRead() => OpenReadAsync().GetAwaiter().GetResult();
+
+        public async Task<Stream> OpenReadAsync(CancellationToken cancellationToken = default)
         {
-            return this;
+            var stream = _provider.OpenReadAsync(this, cancellationToken);
+            return await stream;
         }
 
         public string GetFullPath()
@@ -66,7 +73,7 @@
             return false;
         }
 
-		public override bool Equals(object? obj)
+        public override bool Equals(object? obj)
         {
             return Equals(obj as IStorageNode);
         }

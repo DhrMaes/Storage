@@ -27,7 +27,7 @@
                 return ProviderConfigPropertyType.Int;
             }
 
-            return ProviderConfigPropertyType.PropertyTypeUnspecified;
+            return ProviderConfigPropertyType.Unspecified;
         }
 
         public object GetValue()

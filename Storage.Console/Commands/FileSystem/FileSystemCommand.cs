@@ -14,11 +14,13 @@
 			var command = new Command("fs", "File system operations");
 
 			// Directory commands
+            command.AddCommand(Directory.DirectoryExists.Create(client));
             command.AddCommand(Directory.MakeDirectory.Create(client));
 			command.AddCommand(Directory.RemoveDirectory.Create(client));
 			command.AddCommand(Directory.ListDirectory.Create(client));
-			
+
 			// File commands
+			command.AddCommand(File.DownloadFile.Create(client));
 			command.AddCommand(File.UploadFile.Create(client));
 			command.AddCommand(File.DeleteFile.Create(client));
             return command;

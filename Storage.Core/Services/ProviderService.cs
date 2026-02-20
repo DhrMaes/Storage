@@ -25,6 +25,16 @@
             _pluginLoader = pluginLoader;
         }
 
+        public IReadOnlyCollection<IStoragePlugin> GetPlugins()
+        {
+            return _pluginLoader.Plugins;
+        }
+
+        public IStoragePlugin GetPlugin(string identifier)
+        {
+            return _pluginLoader.GetPlugin(identifier);
+        }
+
         public bool ProviderExists(string identifier)
         {
             if (_providers.ContainsKey(identifier))
@@ -59,7 +69,7 @@
             }
 
             var configPath = configPaths[0];
-            var pluginType = Path.GetDirectoryName(configPath);
+            var pluginType = Path.GetFileName(Path.GetDirectoryName(configPath));
             if (String.IsNullOrEmpty(pluginType))
             {
                 throw new InvalidDataException($"Could not find the provider type for this identifier '{identifier}'.");
@@ -68,6 +78,8 @@
             var plugin = _pluginLoader.GetPlugin(pluginType);
             using var configStream = File.OpenRead(configPath);
             provider = plugin.CreateProviderFromStream(identifier, configStream).GetAwaiter().GetResult();
+
+            _providers.Add(identifier, provider);
 
             return provider;
         }
@@ -82,7 +94,7 @@
             return new StorageProviderReference(identifier);
         }
 
-        public ICollection<IStorageProvider> GetProviders()
+        public IReadOnlyList<IStorageProvider> GetProviders()
         {
             var providers = new List<IStorageProvider>();
             var configPaths = Directory.GetFiles(FileSystem.FileSystem.GetProvidersDir(), $"*.provider", SearchOption.AllDirectories);

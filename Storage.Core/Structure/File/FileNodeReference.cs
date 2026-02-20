@@ -1,12 +1,11 @@
 ﻿namespace DhrMaes.Storage.Core.Structure.File
 {
-	using System.Diagnostics.CodeAnalysis;
-	using System.Text.Json.Serialization;
+    using System.Diagnostics.CodeAnalysis;
 
-	using DhrMaes.Storage.Core.Structure;
-	using DhrMaes.Storage.Core.Structure.Directory;
+    using DhrMaes.Storage.Core.Structure;
+    using DhrMaes.Storage.Core.Structure.Directory;
 
-	public struct FileNodeReference : IFileNode, IEquatable<FileNodeReference>
+    public struct FileNodeReference : IFileNodeReference, IStorageNodeReference<IFileNode>, IEquatable<FileNodeReference>
     {
         public FileNodeReference(string name)
         {
@@ -15,8 +14,7 @@
 
         public string Name { get; set; }
 
-        [JsonIgnore]
-        public IDirectoryNode? Parent { get; set; }
+        public IDirectoryNodeReference? Parent { get; set; }
 
         public static FileNodeReference FromPath(string path)
         {
@@ -25,13 +23,13 @@
                 throw new ArgumentException("Path cannot be null or empty.", nameof(path));
             }
 
-            if (!path.StartsWith('/'))
+            if (!path.StartsWith(Path.DirectorySeparatorChar))
             {
                 throw new ArgumentException("Only supports absolute paths.");
             }
 
             // Normalize and split the path
-            var segments = path.Trim().Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            var segments = path.Trim().Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
             var current = DirectoryNodeReference.Root;
             foreach (var segment in segments.Take(segments.Length - 1))
@@ -49,9 +47,9 @@
             return reference;
         }
 
-        public FileNode ToFileNode(IStorage storage)
+        public IFileNode ToStorageNode(IStorage storage)
         {
-            return new FileNode(storage, this);
+            return storage.GetFile(GetFullPath());
         }
 
         public string GetFullPath()
@@ -69,16 +67,6 @@
             visitor.VisitFileNodeReference(this);
         }
 
-        public bool Equals(IStorageNode? other)
-        {
-            if (!(other is FileNodeReference otherFile))
-            {
-                return false;
-            }
-
-            return Equals(otherFile);
-        }
-
         public bool Equals(FileNodeReference other)
         {
             if (this.GetFullPath() == other.GetFullPath())
@@ -91,12 +79,12 @@
 
         public override bool Equals([NotNullWhen(true)] object? obj)
         {
-            return Equals(obj as IStorageNode);
+            return obj is FileNodeReference other && Equals(other);
         }
 
         public override int GetHashCode()
         {
-            return $"File:{GetFullPath()}".GetHashCode();
+            return $"FileReference:{GetFullPath()}".GetHashCode();
         }
     }
 }

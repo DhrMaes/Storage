@@ -11,6 +11,8 @@ message OpenWriteRequest {
     dhrmaes.storage.protobuf.filesystem.file.v1.FileInfo info = 1;          // First message: metadata
     dhrmaes.storage.protobuf.filesystem.file.v1.FileChunk chunk = 2;        // Rest: chunks of data
   }
+
+  string provider_identifier = 10;
 }
 
 message OpenWriteResponse {

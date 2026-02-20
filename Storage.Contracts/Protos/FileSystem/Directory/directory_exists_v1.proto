@@ -1,0 +1,15 @@
+﻿syntax = "proto3";
+
+package dhrmaes.storage.protobuf.filesystem.directory.v1;
+
+import "Protos/Structure.proto";
+
+option csharp_namespace = "DhrMaes.Storage.Protobuf.FileSystem.Directory.v1";
+
+message DirectoryExistsRequest {
+  string path = 1;
+}
+
+message DirectoryExistsResponse {
+    bool exists = 1;
+}
