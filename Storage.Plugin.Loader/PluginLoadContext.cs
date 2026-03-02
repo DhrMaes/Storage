@@ -1,7 +1,7 @@
+namespace Storage.Plugin.Loader;
+
 using System.Reflection;
 using System.Runtime.Loader;
-
-namespace Storage.Plugin.Loader;
 
 public sealed class PluginLoadContext : AssemblyLoadContext
 {

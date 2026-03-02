@@ -1,6 +1,5 @@
 namespace Storage.Plugin.Loader;
 
-using System.Reflection;
 using Storage.Plugin.Contracts;
 
 public sealed class StoragePluginLoader
