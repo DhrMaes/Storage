@@ -9,6 +9,9 @@ public sealed class LoadedPlugin
     public PluginLoadContext LoadContext { get; }
     public Assembly Assembly { get; }
     public string DirectoryPath { get; }
+    public PluginState State { get; internal set; }
+    public DateTimeOffset LoadedAt { get; }
+    public DateTimeOffset? UnloadedAt { get; internal set; }
 
     public LoadedPlugin(
         IStoragePlugin instance,
@@ -20,5 +23,7 @@ public sealed class LoadedPlugin
         LoadContext = loadContext;
         Assembly = assembly;
         DirectoryPath = directoryPath;
+        State = PluginState.Active;
+        LoadedAt = DateTimeOffset.UtcNow;
     }
 }
