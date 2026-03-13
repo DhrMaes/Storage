@@ -1,0 +1,20 @@
+{
+  "pluginDirectory": "C:\\Plugins",
+  "defaultProvider": "MyLocalStorage",
+  "providers": [
+    {
+      "name": "MyLocalStorage",
+      "pluginId": "LocalFileSystem",
+      "settings": {
+        "RootPath": "C:\\StorageCluster\\Primary"
+      }
+    },
+    {
+      "name": "BackupStorage",
+      "pluginId": "LocalFileSystem",
+      "settings": {
+        "RootPath": "D:\\StorageCluster\\Backup"
+      }
+    }
+  ]
+}
