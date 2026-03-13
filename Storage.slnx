@@ -3,4 +3,5 @@
   <Project Path="Storage.Plugin.Contracts/Storage.Plugin.Contracts.csproj" />
   <Project Path="Storage.Plugin.Loader/Storage.Plugin.Loader.csproj" />
   <Project Path="Storage.Plugin.LocalFileSyste/Storage.Plugin.LocalFileSystem.csproj" Id="820249ce-55f9-41f8-a3ed-cd1c4468d8a0" />
+  <Project Path="Storage.WebApi/Storage.WebApi.csproj" />
 </Solution>

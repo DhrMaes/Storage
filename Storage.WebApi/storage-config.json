@@ -1,0 +1,14 @@
+{
+  "pluginDirectory": "..\\Plugins",
+  "defaultProvider": "LocalStorage",
+  "providers": [
+    {
+      "name": "LocalStorage",
+      "pluginId": "LocalFileSystem",
+      "settings": {
+        "RootPath": "C:\\StorageCluster"
+      },
+      "isDefault": true
+    }
+  ]
+}
